@@ -89,7 +89,7 @@ QListWidget {{
     outline: none;
 }}
 QListWidget::item {{
-    padding: 6px 8px;
+    padding: 0px; /* Custom widget kullanıldığı için padding 0 olmalı, aksi halde offset oluşur */
     border-radius: 5px;
     color: {PALETTE['text_primary']};
     border: none;
@@ -228,7 +228,7 @@ QComboBox::down-arrow {{
     border-top: 5px solid {PALETTE['text_secondary']};
 }}
 QComboBox QAbstractItemView {{
-    background-color: {PALETTE['bg_elevated']};
+    background-color: {PALETTE['bg_surface']}; /* Daha koyu ve opak arka plan */
     border: 1px solid {PALETTE['border_light']};
     border-radius: 7px;
     padding: 4px;
@@ -236,7 +236,7 @@ QComboBox QAbstractItemView {{
     selection-color: {PALETTE['accent_hover']};
     color: {PALETTE['text_primary']};
     outline: none;
-    font-size: 13px;
+    font-size: 13px; /* Font uyarısını önlemek için kesin boyut */
 }}
 QComboBox QAbstractItemView::item {{
     padding: 7px 10px;

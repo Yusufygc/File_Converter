@@ -54,10 +54,15 @@ def _divider() -> QFrame:
 def _form_label(text: str) -> QLabel:
     """Form satırı sol etiketi."""
     lbl = QLabel(text)
+    lbl.setMinimumWidth(50 if text else 0)
+    lbl.setMinimumHeight(24) # Font uyarısını önlemek için minimum yükseklik
     lbl.setStyleSheet(
         f"color: {PALETTE['text_secondary']}; font-size: 12px; background: transparent;"
     )
-    lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    # NOT: setSizePolicy(Fixed, Fixed) burada KULLANILMAMALI.
+    # QFormLayout etiket sütununa negatif boyut atadığında
+    # "QFont::setPointSize: Point size <= 0" uyarısı üretir.
+    # QFormLayout kendi etiket genişliğini otomatik yönetir.
     return lbl
 
 
@@ -121,7 +126,7 @@ class OptionsPanelWidget(QWidget):
 
     def _build_engine_form(self) -> QWidget:
         w = QWidget()
-        w.setStyleSheet("background: transparent;")
+        w.setStyleSheet("background:transparent;")
         form = QFormLayout(w)
         form.setContentsMargins(0, 4, 0, 0)
         form.setSpacing(8)
@@ -142,9 +147,9 @@ class OptionsPanelWidget(QWidget):
         self._engine_status.setStyleSheet(
             f"color: {PALETTE['text_muted']}; font-size: 12px; background: transparent;"
         )
-        self._engine_status.setMinimumWidth(80)
+        self._engine_status.setMinimumHeight(24) # Font uyarısını önlemek için
         self._engine_status.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
 
         form.addRow(_form_label("Motor:"),  self._engine_combo)

@@ -30,7 +30,7 @@ class FileItemWidget(QWidget):
     def __init__(self, file_path: Path, parent=None):
         super().__init__(parent)
         self.file_path = file_path
-        self.setMinimumHeight(40) # Satır yüksekliğini garantiye al
+        self.setFixedHeight(44) # Kesin yükseklik, list item ile tam örtüşmeli
         self._setup_ui()
 
     def _setup_ui(self) -> None:
