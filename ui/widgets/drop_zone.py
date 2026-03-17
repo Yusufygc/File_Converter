@@ -11,6 +11,8 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from ui.styles.theme import PALETTE
+
 
 class DropZoneWidget(QWidget):
     """
@@ -48,7 +50,7 @@ class DropZoneWidget(QWidget):
         self._primary_label = QLabel("Dosyaları buraya sürükleyin veya tıklayın")
         self._primary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._primary_label.setStyleSheet(
-            f"font-size: 13px; font-weight: 600; color: #ECEEF5; background: transparent; border: none;"
+            f"font-size: 13px; font-weight: 600; color: {PALETTE['text_primary']}; background: transparent; border: none;"
         )
 
         # Secondary text
@@ -56,7 +58,7 @@ class DropZoneWidget(QWidget):
         secondary = QLabel(ext_list)
         secondary.setAlignment(Qt.AlignmentFlag.AlignCenter)
         secondary.setStyleSheet(
-            f"font-size: 11px; color: #525A78; background: transparent; border: none; letter-spacing: 0.5px;"
+            f"font-size: 11px; color: {PALETTE['text_muted']}; background: transparent; border: none; letter-spacing: 0.5px;"
         )
 
         layout.addWidget(icon_label)

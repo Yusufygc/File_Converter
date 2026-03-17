@@ -20,9 +20,9 @@ PALETTE = {
     "warning":       "#F5A623",
     "error":         "#F05252",
     "error_dim":     "rgba(240,82,82,0.12)",
-    "text_primary":  "#ECEEF5",
-    "text_secondary":"#9BA3BF",
-    "text_muted":    "#525A78",
+    "text_primary":  "#FFFFFF",
+    "text_secondary":"#B0B8D1",
+    "text_muted":    "#6E7794",
     "border":        "#252A42",
     "border_light":  "#303759",
 }
@@ -236,6 +236,7 @@ QComboBox QAbstractItemView {{
     selection-color: {PALETTE['accent_hover']};
     color: {PALETTE['text_primary']};
     outline: none;
+    font-size: 13px;
 }}
 QComboBox QAbstractItemView::item {{
     padding: 7px 10px;
@@ -363,6 +364,19 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
 }}
 QScrollBar:horizontal {{
     height: 0;
+}}
+
+/* ── Section Cards (options panel) ─────────────────── */
+QWidget#sectionCard {{
+    background: {PALETTE['bg_card']};
+    border: 1px solid {PALETTE['border']};
+    border-radius: 8px;
+}}
+QWidget#sectionCard QLabel {{
+    background: transparent;
+}}
+QWidget#sectionCard QWidget {{
+    background: transparent;
 }}
 
 /* ── Tooltip ────────────────────────────────────────── */

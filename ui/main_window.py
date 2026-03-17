@@ -18,10 +18,8 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSizePolicy,
-    QStatusBar,
     QVBoxLayout,
     QWidget,
-    QFrame,
     QMessageBox,
 )
 
@@ -56,8 +54,8 @@ class MainWindow(QMainWindow):
 
         # ── Window Setup ───────────────────────────────────────────
         self.setWindowTitle("FileConvert Pro")
-        self.setMinimumSize(780, 620)
-        self.resize(900, 680)
+        self.setMinimumSize(960, 600) # Yatay yerleşim için genişletilmiş minimum
+        self.resize(1100, 700)
 
         self._build_ui()
         self._connect_signals()
@@ -83,7 +81,7 @@ class MainWindow(QMainWindow):
     def _build_header(self) -> QWidget:
         header = QWidget()
         header.setObjectName("titleBar")
-        header.setFixedHeight(52)
+        header.setMinimumHeight(52)
 
         layout = QHBoxLayout(header)
         layout.setContentsMargins(20, 0, 20, 0)
@@ -115,42 +113,59 @@ class MainWindow(QMainWindow):
 
     def _build_body(self) -> QWidget:
         body = QWidget()
-        layout = QVBoxLayout(body)
+        layout = QHBoxLayout(body) # Yatay yerleşim
         layout.setContentsMargins(20, 16, 20, 0)
-        layout.setSpacing(10)
+        layout.setSpacing(24)
 
-        # Drop Zone — compact
-        self._drop_zone = DropZoneWidget(accepted_extensions=[".pptx"])
-        self._drop_zone.setFixedHeight(110)
-        layout.addWidget(self._drop_zone)
-
-        # Dosya listesi — toolbar'dan ÖNCE oluşturulmalı
-        self._file_list = FileListWidget()
-
-        # Araç çubuğu
-        layout.addLayout(self._build_toolbar())
-
-        layout.addWidget(self._file_list, 1)
+        # ── SOL PANEL: Ayarlar ve Dönüştür ────────────────────────────
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(12)
 
         # Seçenek paneli
         self._options_panel = OptionsPanelWidget()
-        layout.addWidget(self._options_panel)
-
-        # Progress bar
-        self._progress_bar = QProgressBar()
-        self._progress_bar.setVisible(False)
-        self._progress_bar.setFixedHeight(5)
-        self._progress_bar.setTextVisible(False)
-        layout.addWidget(self._progress_bar)
+        left_layout.addWidget(self._options_panel, 1)
 
         # Dönüştür butonu — CTA
         self._convert_btn = QPushButton("⚡   Dönüştür")
         self._convert_btn.setObjectName("primaryBtn")
         self._convert_btn.setFixedHeight(46)
         self._convert_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        layout.addWidget(self._convert_btn)
+        left_layout.addWidget(self._convert_btn)
+        left_layout.addSpacing(12)
 
-        layout.addSpacing(12)
+        # ── SAĞ PANEL: Dosyalar ──────────────────────────────────────
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(10)
+
+        # Drop Zone
+        self._drop_zone = DropZoneWidget(accepted_extensions=[".pptx"])
+        self._drop_zone.setFixedHeight(100)
+        right_layout.addWidget(self._drop_zone)
+
+        # Dosya listesi - Toolbar'dan önce oluşturulmalı çünkü toolbar buna referans veriyor
+        self._file_list = FileListWidget()
+
+        # Araç çubuğu
+        right_layout.addLayout(self._build_toolbar())
+
+        # Dosya listesi ekle
+        right_layout.addWidget(self._file_list, 1)
+
+        # Progress bar
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setVisible(False)
+        self._progress_bar.setMinimumHeight(6)
+        self._progress_bar.setTextVisible(False)
+        right_layout.addWidget(self._progress_bar)
+        right_layout.addSpacing(12)
+
+        layout.addWidget(left_panel, 1) # Eşit oran
+        layout.addWidget(right_panel, 1) # Eşit oran
+        
         return body
 
     def _build_toolbar(self) -> QHBoxLayout:
@@ -159,20 +174,29 @@ class MainWindow(QMainWindow):
 
         self._file_count_label = QLabel("Dosya eklenmedi")
         self._file_count_label.setObjectName("fileCount")
+        self._file_count_label.setMinimumWidth(80)
+        self._file_count_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
 
         add_btn = QPushButton("＋  Dosya Ekle")
         add_btn.setObjectName("addBtn")
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_btn.setMinimumWidth(100)
         add_btn.clicked.connect(self._open_file_dialog)
 
-        self._remove_btn = QPushButton("Seçilenleri Kaldır")
+        self._remove_btn = QPushButton("Kaldır")
         self._remove_btn.setObjectName("dangerBtn")
         self._remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remove_btn.setEnabled(False)
+        self._remove_btn.setMinimumWidth(70)
+        self._remove_btn.setToolTip("Seçili dosyaları listeden kaldır")
         self._remove_btn.clicked.connect(self._file_list.remove_selected)
 
-        self._clear_btn = QPushButton("Tümünü Temizle")
+        self._clear_btn = QPushButton("Temizle")
         self._clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._clear_btn.setMinimumWidth(70)
+        self._clear_btn.setToolTip("Tüm dosyaları listeden kaldır")
         self._clear_btn.clicked.connect(self._file_list.clear_all)
 
         toolbar.addWidget(self._file_count_label)
@@ -185,7 +209,7 @@ class MainWindow(QMainWindow):
 
     def _build_footer(self) -> QWidget:
         footer = QWidget()
-        footer.setFixedHeight(30)
+        footer.setMinimumHeight(32)
         footer.setStyleSheet(
             f"background: {PALETTE['bg_surface']}; border-top: 1px solid {PALETTE['border']};"
         )
