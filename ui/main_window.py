@@ -8,8 +8,8 @@ Controller rolü üstlenir: UI event → Service → UI güncellemesi.
 from pathlib import Path
 from typing import List
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -26,15 +26,19 @@ from PySide6.QtWidgets import (
 from core.interfaces.converter_interface import (
     BatchConversionResult,
     ConversionResult,
+    IConverter,
 )
-from services.conversion_service import ConversionService
+from ui.adapters.qt_conversion_runner import QtConversionRunner
 from ui.dialogs.summary_dialog import SummaryDialog
 from ui.styles.theme import PALETTE
 from ui.widgets.drop_zone import DropZoneWidget
 from ui.widgets.file_list import FileListWidget
 from ui.widgets.options_panel import OptionsPanelWidget
 from core.converters.registry import ConverterRegistry
-from core.converters.pptx_to_pdf import PptxToPdfConverter
+from core.converters.discovery import register_all
+from core.interfaces.engine_interface import IEngineSelectable
+from core.utils.resource_helper import get_resource_path
+from ui.converter_catalog import catalog_entries
 
 
 class MainWindow(QMainWindow):
@@ -46,21 +50,35 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # ── Dependency Composition ─────────────────────────────────
+        # Converter'lar elle import/instantiate edilmez — core/converters/
+        # paketi otomatik taranır (bkz. discovery.py). Yeni bir dönüşüm
+        # eklemek için tek yapılması gereken: o pakete bir dosya eklemek.
         self._registry = ConverterRegistry()
-        self._pptx_converter = PptxToPdfConverter()
-        self._registry.register(self._pptx_converter)
+        register_all(self._registry)
+        self._converters: List[IConverter] = catalog_entries(self._registry)
 
-        self._service = ConversionService(self._registry)
+        # Aktif converter — başlangıçta katalogdaki ilk sıradaki (bkz.
+        # ui/converter_catalog.py _PREFERRED_ORDER)
+        self._active_converter: IConverter = self._converters[0]
+
+        self._service = QtConversionRunner(self._registry)
 
         # ── Window Setup ───────────────────────────────────────────
         self.setWindowTitle("FileConvert Pro")
-        self.setMinimumSize(960, 600) # Yatay yerleşim için genişletilmiş minimum
-        self.resize(1100, 700)
+        self.setWindowIcon(QIcon(get_resource_path("assets/icons/app_icon.svg")))
+        self.setMinimumSize(960, 680) # 4 bölümlü options panel için yükseklik artırıldı
+        self.resize(1100, 760)
 
         self._build_ui()
         self._connect_signals()
         self._populate_engines()
         self._update_ui_state()
+
+        # Converter türleri event loop başladıktan sonra eklenir —
+        # DPI bağlamı o noktada hazır olur, QFont uyarısı oluşmaz.
+        QTimer.singleShot(
+            0, lambda: self._options_panel.populate_converter_types(self._converters)
+        )
 
     # ================================================================== #
     #  UI Construction                                                     #
@@ -87,8 +105,9 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(20, 0, 20, 0)
         layout.setSpacing(0)
 
-        logo = QLabel("⚡")
-        logo.setStyleSheet("font-size: 18px; background: transparent; margin-right: 8px;")
+        logo = QLabel()
+        logo.setPixmap(QIcon(get_resource_path("assets/icons/app_icon.svg")).pixmap(24, 24))
+        logo.setStyleSheet("background: transparent; margin-right: 8px;")
 
         title = QLabel("FileConvert Pro")
         title.setObjectName("appTitle")
@@ -97,13 +116,14 @@ class MainWindow(QMainWindow):
             f"background: transparent; margin-right: 12px;"
         )
 
-        badge = QLabel("PPTX → PDF")
-        badge.setObjectName("formatBadge")
-        badge.setStyleSheet(
+        self._format_badge = QLabel(self._active_converter.display_name.upper())
+        self._format_badge.setObjectName("formatBadge")
+        self._format_badge.setStyleSheet(
             f"font-size: 10px; font-weight: 700; letter-spacing: 1px;"
             f"background: {PALETTE['accent_dim']}; color: {PALETTE['accent']};"
             f"border-radius: 4px; padding: 3px 8px;"
         )
+        badge = self._format_badge
 
         layout.addWidget(logo)
         layout.addWidget(title)
@@ -141,8 +161,10 @@ class MainWindow(QMainWindow):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(10)
 
-        # Drop Zone
-        self._drop_zone = DropZoneWidget(accepted_extensions=[".pptx"])
+        # Drop Zone — başlangıçta aktif converter'ın kabul ettiği uzantı(lar)
+        self._drop_zone = DropZoneWidget(
+            accepted_extensions=self._active_converter.accepted_extensions
+        )
         self._drop_zone.setFixedHeight(100)
         right_layout.addWidget(self._drop_zone)
 
@@ -179,23 +201,26 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
 
-        add_btn = QPushButton("＋  Dosya Ekle")
+        add_btn = QPushButton(" Dosya Ekle")
+        add_btn.setIcon(QIcon(get_resource_path("assets/icons/add.svg")))
         add_btn.setObjectName("addBtn")
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_btn.setMinimumWidth(100)
+        add_btn.setMinimumWidth(120)
         add_btn.clicked.connect(self._open_file_dialog)
 
-        self._remove_btn = QPushButton("Kaldır")
+        self._remove_btn = QPushButton(" Kaldır")
+        self._remove_btn.setIcon(QIcon(get_resource_path("assets/icons/remove.svg")))
         self._remove_btn.setObjectName("dangerBtn")
         self._remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remove_btn.setEnabled(False)
-        self._remove_btn.setMinimumWidth(70)
+        self._remove_btn.setMinimumWidth(90)
         self._remove_btn.setToolTip("Seçili dosyaları listeden kaldır")
         self._remove_btn.clicked.connect(self._file_list.remove_selected)
 
-        self._clear_btn = QPushButton("Temizle")
+        self._clear_btn = QPushButton(" Temizle")
+        self._clear_btn.setIcon(QIcon(get_resource_path("assets/icons/clear.svg")))
         self._clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._clear_btn.setMinimumWidth(70)
+        self._clear_btn.setMinimumWidth(90)
         self._clear_btn.setToolTip("Tüm dosyaları listeden kaldır")
         self._clear_btn.clicked.connect(self._file_list.clear_all)
 
@@ -220,10 +245,9 @@ class MainWindow(QMainWindow):
         self._status_label = QLabel("Hazır")
         self._status_label.setObjectName("statusLabel")
 
-        engine_name = self._pptx_converter.active_engine_name
-        is_ok = self._pptx_converter.is_available
-        dot = "●"
-        self._engine_footer_label = QLabel(f"{dot}  {engine_name}")
+        engine_name = self._active_converter.active_engine_name
+        is_ok = self._active_converter.is_available
+        self._engine_footer_label = QLabel(f"●  {engine_name}")
         color = PALETTE['success'] if is_ok else PALETTE['error']
         self._engine_footer_label.setStyleSheet(
             f"color: {color}; font-size: 11px; font-weight: 600; background: transparent;"
@@ -240,49 +264,41 @@ class MainWindow(QMainWindow):
     # ================================================================== #
 
     def _populate_engines(self) -> None:
-        """Uygulama açılışında mevcut motorları options panel'e bildir."""
+        """Motor seçimi destekleyen converter için mevcut motorları options panel'e bildirir."""
+        converter = self._active_converter
         self._options_panel.populate_engines(
-            available=self._pptx_converter.available_engines(),
-            active=self._pptx_converter.active_engine,
+            available=converter.available_engines(),
+            active=converter.active_engine,
         )
+        self._update_footer_engine(converter.active_engine_name, converter.is_available)
 
     def _on_engine_changed(self, engine) -> None:
         """
         Kullanıcı motor seçimini değiştirdiğinde çağrılır.
-        engine=None → Otomatik
+        engine=None → Otomatik. `set_preferred_engine(None)` converter'ın
+        kendi resolver'ında zaten "ilk müsait motoru seç" anlamına gelir —
+        UI'ın converter'ın özel/private durumuna dokunmasına gerek yok.
         """
         from core.converters.pptx_to_pdf import ConversionEngine
         from PySide6.QtWidgets import QMessageBox
 
-        if engine is None:
-            # Otomatik moda geç: preferred'ı sıfırlayıp tekrar resolve et
-            self._pptx_converter._preferred = None
-            self._pptx_converter._active_strategy = (
-                self._pptx_converter._resolve_strategy()
+        converter = self._active_converter
+        success = converter.set_preferred_engine(engine)
+        if engine is not None and not success:
+            hint = (
+                "pip install pywin32"
+                if engine == ConversionEngine.MS_OFFICE
+                else "https://www.libreoffice.org/download"
             )
-        else:
-            success = self._pptx_converter.set_preferred_engine(engine)
-            if not success:
-                hint = (
-                    "pip install pywin32"
-                    if engine == ConversionEngine.MS_OFFICE
-                    else "https://www.libreoffice.org/download"
-                )
-                QMessageBox.warning(
-                    self,
-                    "Motor Kullanılamıyor",
-                    f"Seçilen motor bu sistemde mevcut değil.\n\n{hint}",
-                )
-                return
+            QMessageBox.warning(
+                self,
+                "Motor Kullanılamıyor",
+                f"Seçilen motor bu sistemde mevcut değil.\n\n{hint}",
+            )
+            return
 
         # Footer güncelle
-        name = self._pptx_converter.active_engine_name
-        is_ok = self._pptx_converter.is_available
-        color = PALETTE['success'] if is_ok else PALETTE['error']
-        self._engine_footer_label.setText(f"●  {name}")
-        self._engine_footer_label.setStyleSheet(
-            f"color: {color}; font-size: 11px; font-weight: 600; background: transparent;"
-        )
+        self._update_footer_engine(converter.active_engine_name, converter.is_available)
         self._update_ui_state()
 
     # ================================================================== #
@@ -295,10 +311,43 @@ class MainWindow(QMainWindow):
         self._file_list.selection_changed.connect(self._on_selection_changed)
         self._convert_btn.clicked.connect(self._start_conversion)
         self._options_panel.engine_changed.connect(self._on_engine_changed)
+        self._options_panel.converter_type_changed.connect(self._on_converter_type_changed)
 
     # ================================================================== #
     #  Slots                                                               #
     # ================================================================== #
+
+    def _on_converter_type_changed(self, converter: IConverter) -> None:
+        """Kullanıcı dönüşüm türünü değiştirdiğinde çağrılır."""
+        self._active_converter = converter
+
+        # Drop zone güncelle
+        self._drop_zone.set_accepted_extensions(converter.accepted_extensions)
+
+        # Dosya listesini temizle (uyumsuz dosyalar kalmasın)
+        self._file_list.clear_all()
+
+        # Badge güncelle
+        self._format_badge.setText(
+            self._active_converter.display_name.upper()
+        )
+
+        # Engine bölümü güncelle — motor seçimi destekleyip desteklemediğini
+        # belirli bir dönüşüm türünü hardcode etmeden, capability protokolüyle anla
+        if isinstance(self._active_converter, IEngineSelectable):
+            self._options_panel.restore_engine_combo()
+            self._populate_engines()
+        else:
+            self._options_panel.set_engine_status(
+                self._active_converter.active_engine_name,
+                self._active_converter.is_available,
+            )
+            self._update_footer_engine(
+                self._active_converter.active_engine_name,
+                self._active_converter.is_available,
+            )
+
+        self._update_ui_state()
 
     def _on_files_dropped(self, paths: List[Path]) -> None:
         if not paths:
@@ -308,11 +357,18 @@ class MainWindow(QMainWindow):
         self._file_list.add_files(paths)
 
     def _open_file_dialog(self) -> None:
+        display_name = self._active_converter.display_name.split("→")[0].strip()
+
+        patterns = " ".join(f"*{ext}" for ext in self._active_converter.accepted_extensions)
+        filters = (
+            f"{display_name} Dosyaları ({patterns});;"
+            "Tüm Dosyalar (*.*)"
+        )
         paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "PPTX Dosyaları Seç",
+            f"{display_name} Dosyaları Seç",
             str(Path.home()),
-            "PowerPoint Dosyaları (*.pptx);;Tüm Dosyalar (*.*)",
+            filters,
         )
         if paths:
             self._file_list.add_files([Path(p) for p in paths])
@@ -334,13 +390,13 @@ class MainWindow(QMainWindow):
         if not files:
             return
 
-        if not self._pptx_converter.is_available:
+        if not self._active_converter.is_available:
+            name = self._active_converter.display_name
             QMessageBox.critical(
                 self,
-                "LibreOffice Gerekli",
-                "PPTX → PDF dönüşümü için LibreOffice kurulu olmalıdır.\n\n"
-                "Ubuntu/Debian: sudo apt install libreoffice\n"
-                "Windows: https://www.libreoffice.org/download",
+                "Motor Bulunamadı",
+                f"{name} dönüşümü için gerekli araç kurulu değil.\n\n"
+                + self._active_converter.unavailable_hint,
             )
             return
 
@@ -352,7 +408,7 @@ class MainWindow(QMainWindow):
 
         self._service.start_batch_conversion(
             files=files,
-            converter=self._pptx_converter,
+            converter=self._active_converter,
             options=options,
             on_progress=self._on_progress,
             on_file_done=self._on_file_done,
@@ -381,6 +437,13 @@ class MainWindow(QMainWindow):
 
         dialog = SummaryDialog(batch, self)
         dialog.exec()
+
+    def _update_footer_engine(self, engine_name: str, is_available: bool) -> None:
+        color = PALETTE['success'] if is_available else PALETTE['error']
+        self._engine_footer_label.setText(f"●  {engine_name}")
+        self._engine_footer_label.setStyleSheet(
+            f"color: {color}; font-size: 11px; font-weight: 600; background: transparent;"
+        )
 
     # ================================================================== #
     #  State Management                                                    #

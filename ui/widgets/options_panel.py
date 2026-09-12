@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 
-from core.interfaces.converter_interface import ConversionOptions
+from core.interfaces.converter_interface import ConversionOptions, IConverter
 from core.converters.pptx_to_pdf import ConversionEngine
 from ui.styles.theme import PALETTE
 
@@ -35,6 +35,7 @@ from ui.styles.theme import PALETTE
 def _section_header(text: str) -> QLabel:
     """Grup başlığı — GroupBox yerine sade label + ince çizgi."""
     lbl = QLabel(text)
+    lbl.setMinimumHeight(16)  # Negatif yükseklik → QFont uyarısını önler
     lbl.setStyleSheet(
         f"color: {PALETTE['text_muted']};"
         f"font-size: 10px; font-weight: 700; letter-spacing: 1.2px;"
@@ -48,6 +49,7 @@ def _divider() -> QFrame:
     line.setFrameShape(QFrame.Shape.HLine)
     line.setStyleSheet(f"color: {PALETTE['border']}; background: transparent;")
     line.setFixedHeight(1)
+    line.setMinimumHeight(1)
     return line
 
 
@@ -69,8 +71,9 @@ def _form_label(text: str) -> QLabel:
 class OptionsPanelWidget(QWidget):
     """Kullanıcı seçeneklerini toplayan panel."""
 
-    options_changed = Signal()
-    engine_changed  = Signal(object)   # ConversionEngine | None
+    options_changed       = Signal()
+    engine_changed        = Signal(object)   # ConversionEngine | None
+    converter_type_changed = Signal(object)  # seçilen IConverter
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -86,8 +89,13 @@ class OptionsPanelWidget(QWidget):
         root.setContentsMargins(0, 4, 0, 0)
         root.setSpacing(0)
 
+        # ── Bölüm: Dönüşüm Türü ───────────────────────────────────
+        root.addWidget(self._section("DÖNÜŞÜM TÜRÜ", self._build_converter_type_form()))
+
         # ── Bölüm: Motor ──────────────────────────────────────────
-        root.addWidget(self._section("DÖNÜŞÜM MOTORU", self._build_engine_form()))
+        root.addSpacing(6)
+        self._engine_section = self._section("DÖNÜŞÜM MOTORU", self._build_engine_form())
+        root.addWidget(self._engine_section)
 
         # ── Bölüm: Çıktı ──────────────────────────────────────────
         root.addSpacing(6)
@@ -118,9 +126,31 @@ class OptionsPanelWidget(QWidget):
         v.addWidget(_divider())
         v.addWidget(form_widget)
         
-        # Yatay yerleşimde sıkışmayı önlemek için minimum yükseklik
-        card.setMinimumHeight(96)
+        # Sıkışmayı önlemek için minimum yükseklik (4 bölüme göre azaltıldı)
+        card.setMinimumHeight(72)
         return card
+
+    # ── Dönüşüm türü formu ───────────────────────────────────────────── #
+
+    def _build_converter_type_form(self) -> QWidget:
+        w = QWidget()
+        w.setStyleSheet("background:transparent;")
+        form = QFormLayout(w)
+        form.setContentsMargins(0, 4, 0, 0)
+        form.setSpacing(8)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
+        self._conv_type_combo = QComboBox()
+        self._conv_type_combo.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        # Öğeler burada EKLENMEZ — DPI bağlamı henüz hazır değil.
+        # populate_converter_types() çağrısı MainWindow tarafından yapılır.
+        self._conv_type_combo.currentIndexChanged.connect(self._on_converter_type_changed)
+
+        form.addRow(_form_label("Format:"), self._conv_type_combo)
+        return w
 
     # ── Motor formu ───────────────────────────────────────────────────── #
 
@@ -212,10 +242,21 @@ class OptionsPanelWidget(QWidget):
         self._dpi_spin.setMinimumWidth(80)
         self._dpi_spin.setMaximumWidth(110)
         self._dpi_spin.setToolTip(
-            "Yalnızca LibreOffice motorunda etkilidir.\n"
+            "LibreOffice motorunda ve PDF → JPG dönüşümünde etkilidir.\n"
             "MS Office kendi kalite ayarlarını kullanır."
         )
         self._dpi_spin.valueChanged.connect(self.options_changed)
+
+        self._quality_spin = QSpinBox()
+        self._quality_spin.setRange(1, 100)
+        self._quality_spin.setValue(90)
+        self._quality_spin.setSuffix(" %")
+        self._quality_spin.setMinimumWidth(80)
+        self._quality_spin.setMaximumWidth(110)
+        self._quality_spin.setToolTip(
+            "Yalnızca PDF → JPG dönüşümünde etkilidir (JPEG kalitesi)."
+        )
+        self._quality_spin.valueChanged.connect(self.options_changed)
 
         self._overwrite_check = QCheckBox("Mevcut dosyaların üzerine yaz")
         self._overwrite_check.setChecked(True)
@@ -224,8 +265,9 @@ class OptionsPanelWidget(QWidget):
         )
         self._overwrite_check.stateChanged.connect(self.options_changed)
 
-        form.addRow(_form_label("DPI:"),    self._dpi_spin)
-        form.addRow(_form_label(""),        self._overwrite_check)
+        form.addRow(_form_label("DPI:"),     self._dpi_spin)
+        form.addRow(_form_label("Kalite:"),  self._quality_spin)
+        form.addRow(_form_label(""),         self._overwrite_check)
         return w
 
     # ================================================================== #
@@ -264,15 +306,55 @@ class OptionsPanelWidget(QWidget):
         return ConversionOptions(
             output_dir=self._output_dir,
             dpi=self._dpi_spin.value(),
+            quality=self._quality_spin.value(),
             overwrite_existing=self._overwrite_check.isChecked(),
         )
 
     def selected_engine(self) -> Optional[ConversionEngine]:
         return self._engine_combo.currentData()
 
+    def populate_converter_types(self, converters: List[IConverter]) -> None:
+        """
+        Dönüşüm türü seçeneklerini registry'den gelen converter listesinden
+        JENERİK olarak doldurur — yeni bir converter eklemek bu metoda
+        dokunmayı gerektirmez.
+        MainWindow, pencere gösterildikten SONRA çağırır —
+        bu sayede DPI bağlamı hazır olur ve QFont uyarısı oluşmaz.
+        """
+        self._conv_type_combo.blockSignals(True)
+        self._conv_type_combo.clear()
+        for converter in converters:
+            self._conv_type_combo.addItem(converter.display_name, userData=converter)
+        self._conv_type_combo.blockSignals(False)
+
+    def set_engine_status(self, engine_name: str, is_available: bool) -> None:
+        """
+        PDF converter'lar için engine combo içeriğini değiştirir ve devre dışı bırakır.
+        setVisible kullanmaz — layout değişmez, QFont uyarısı oluşmaz.
+        """
+        self._engine_combo.blockSignals(True)
+        self._engine_combo.clear()
+        self._engine_combo.addItem(engine_name)
+        self._engine_combo.setEnabled(False)
+        self._engine_combo.blockSignals(False)
+
+        color = PALETTE["success"] if is_available else PALETTE["error"]
+        self._engine_status.setText(f"●  {engine_name}")
+        self._engine_status.setStyleSheet(
+            f"color: {color}; font-size: 12px; font-weight: 600; background: transparent;"
+        )
+
+    def restore_engine_combo(self) -> None:
+        """PPTX converter seçildiğinde combo'yu tekrar etkinleştirir."""
+        self._engine_combo.setEnabled(True)
+        # populate_engines() main_window tarafından çağrılarak öğeler yenilenir.
+
     # ================================================================== #
     #  Private                                                             #
     # ================================================================== #
+
+    def _on_converter_type_changed(self, _index: int) -> None:
+        self.converter_type_changed.emit(self._conv_type_combo.currentData())
 
     def _on_engine_changed(self, _index: int) -> None:
         self.engine_changed.emit(self._engine_combo.currentData())

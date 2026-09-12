@@ -7,11 +7,12 @@ Dosya sürükle-bırak alanı. SRP: sadece dosya alımından sorumlu.
 from pathlib import Path
 from typing import List
 
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ui.styles.theme import PALETTE
+from core.utils.resource_helper import get_resource_path
 
 
 class DropZoneWidget(QWidget):
@@ -42,9 +43,11 @@ class DropZoneWidget(QWidget):
         layout.setSpacing(6)
 
         # Icon
-        icon_label = QLabel("📂")
+        icon_label = QLabel()
+        icon_pixmap = QIcon(get_resource_path("assets/icons/app_icon.svg")).pixmap(48, 48)
+        icon_label.setPixmap(icon_pixmap)
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet("font-size: 28px; background: transparent; border: none;")
+        icon_label.setStyleSheet("background: transparent; border: none;")
 
         # Primary text
         self._primary_label = QLabel("Dosyaları buraya sürükleyin veya tıklayın")
@@ -54,16 +57,16 @@ class DropZoneWidget(QWidget):
         )
 
         # Secondary text
-        ext_list = "  ·  ".join(e.upper() for e in self._accepted)
-        secondary = QLabel(ext_list)
-        secondary.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        secondary.setStyleSheet(
+        ext_list = "  ·  ".join(e.upper() for e in sorted(self._accepted))
+        self._ext_label = QLabel(ext_list)
+        self._ext_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ext_label.setStyleSheet(
             f"font-size: 11px; color: {PALETTE['text_muted']}; background: transparent; border: none; letter-spacing: 0.5px;"
         )
 
         layout.addWidget(icon_label)
         layout.addWidget(self._primary_label)
-        layout.addWidget(secondary)
+        layout.addWidget(self._ext_label)
 
     # ------------------------------------------------------------------ #
     #  Drag & Drop Events                                                  #
@@ -100,6 +103,12 @@ class DropZoneWidget(QWidget):
         # Tıklama ile de dosya seçilebilsin (parent MainWindow handle eder)
         self.files_dropped.emit([])  # boş liste → dosya diyaloğu aç
         super().mousePressEvent(event)
+
+    def set_accepted_extensions(self, extensions: List[str]) -> None:
+        """Kabul edilen dosya uzantılarını günceller ve etiketi yeniler."""
+        self._accepted = {ext.lower() for ext in extensions}
+        ext_list = "  ·  ".join(e.upper() for e in sorted(self._accepted))
+        self._ext_label.setText(ext_list)
 
     def _refresh_style(self) -> None:
         self.style().unpolish(self)

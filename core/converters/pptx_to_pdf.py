@@ -14,20 +14,16 @@ OCP : Yeni motor eklemek için sadece yeni bir _Engine subclass'ı yaz.
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 import sys
-import time
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from pathlib import Path
 from typing import List, Optional
 
-from core.interfaces.converter_interface import (
-    ConversionOptions,
-    ConversionResult,
-    IConverter,
-)
+from core.converters.base import BaseConverter, ConvertOutcome
+from core.converters.libreoffice_engine import LibreOfficeEngine
+from core.interfaces.converter_interface import ConversionOptions
+from core.interfaces.engine_interface import IEngineSelectable
 
 
 # ======================================================================== #
@@ -127,79 +123,25 @@ class _MsOfficeStrategy(_ConversionStrategy):
 class _LibreOfficeStrategy(_ConversionStrategy):
     """LibreOffice headless ile dönüştürür. Cross-platform."""
 
-    _CANDIDATES: List[str] = [
-        "libreoffice",
-        "soffice",
-        "/usr/lib/libreoffice/program/soffice",
-        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-        r"C:\Program Files\LibreOffice\program\soffice.exe",
-        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-    ]
-
     def __init__(self):
-        self._path: Optional[str] = self._detect()
+        self._engine = LibreOfficeEngine()
 
     @property
     def engine(self) -> ConversionEngine:
         return ConversionEngine.LIBREOFFICE
 
     def is_available(self) -> bool:
-        return self._path is not None
+        return self._engine.is_available()
 
     def convert(self, source_path: Path, output_path: Path) -> None:
-        out_dir = output_path.parent
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        result = subprocess.run(
-            [
-                self._path,
-                "--headless",
-                "--invisible",
-                "--nologo",
-                "--norestore",
-                "--convert-to", "pdf",
-                "--outdir", str(out_dir),
-                str(source_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"LibreOffice hatası:\n{result.stderr or result.stdout}"
-            )
-
-        lo_out = out_dir / (source_path.stem + ".pdf")
-        if not lo_out.exists():
-            fallback = source_path.parent / (source_path.stem + ".pdf")
-            if fallback.exists() and fallback != lo_out:
-                shutil.move(str(fallback), str(lo_out))
-            else:
-                raise FileNotFoundError(
-                    f"Dönüşüm sonrası PDF bulunamadı: {lo_out}"
-                )
-
-        if lo_out != output_path:
-            shutil.move(str(lo_out), str(output_path))
-
-    @staticmethod
-    def _detect() -> Optional[str]:
-        for candidate in _LibreOfficeStrategy._CANDIDATES:
-            found = shutil.which(candidate) or (
-                Path(candidate).exists() and candidate
-            )
-            if found:
-                return str(found)
-        return None
+        self._engine.convert_to(source_path, output_path, "pdf")
 
 
 # ======================================================================== #
 #  Ana Converter — Strategy'leri orkestre eder                             #
 # ======================================================================== #
 
-class PptxToPdfConverter(IConverter):
+class PptxToPdfConverter(BaseConverter, IEngineSelectable):
     """
     PPTX → PDF dönüştürücü.
 
@@ -235,57 +177,18 @@ class PptxToPdfConverter(IConverter):
     def display_name(self) -> str:
         return "PowerPoint → PDF"
 
-    def validate(self, source_path: Path) -> bool:
-        return (
-            source_path.exists()
-            and source_path.is_file()
-            and source_path.suffix.lower() == self.source_extension
-        )
-
-    def convert(
+    def _do_convert(
         self,
         source_path: Path,
+        output_path: Path,
         options: ConversionOptions,
-    ) -> ConversionResult:
-        start = time.monotonic()
+    ) -> Optional[ConvertOutcome]:
+        self._active_strategy.convert(source_path, output_path)
+        return None
 
-        if not self.validate(source_path):
-            return ConversionResult(
-                source_path=source_path,
-                output_path=None,
-                success=False,
-                error_message=f"Geçersiz dosya: {source_path.name}",
-                elapsed_seconds=time.monotonic() - start,
-            )
-
-        if self._active_strategy is None:
-            return ConversionResult(
-                source_path=source_path,
-                output_path=None,
-                success=False,
-                error_message=self._no_engine_message(),
-                elapsed_seconds=time.monotonic() - start,
-            )
-
-        output_path = self.get_output_path(source_path, options)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        try:
-            self._active_strategy.convert(source_path, output_path)
-            return ConversionResult(
-                source_path=source_path,
-                output_path=output_path,
-                success=True,
-                elapsed_seconds=time.monotonic() - start,
-            )
-        except Exception as exc:
-            return ConversionResult(
-                source_path=source_path,
-                output_path=None,
-                success=False,
-                error_message=str(exc),
-                elapsed_seconds=time.monotonic() - start,
-            )
+    @property
+    def unavailable_hint(self) -> str:
+        return self._no_engine_message()
 
     # ------------------------------------------------------------------ #
     #  Public helpers (UI tarafından kullanılır)                          #

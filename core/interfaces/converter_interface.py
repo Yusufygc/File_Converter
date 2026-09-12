@@ -86,6 +86,26 @@ class IConverter(ABC):
     def display_name(self) -> str:
         """Kullanıcıya gösterilecek dönüşüm adı (örn: 'PPTX → PDF')"""
 
+    @property
+    def accepted_extensions(self) -> List[str]:
+        """
+        Kabul edilen kaynak dosya uzantıları.
+        Varsayılan: yalnızca `source_extension`. Birden çok uzantı kabul
+        eden converter'lar (örn. .jpg + .jpeg) bunu override eder.
+        UI (drop zone, dosya diyaloğu) bunu okuyarak filtre kurar.
+        """
+        return [self.source_extension]
+
+    @property
+    @abstractmethod
+    def is_available(self) -> bool:
+        """Bu dönüşüm için gerekli motor/araç sistemde kurulu/erişilebilir mi."""
+
+    @property
+    @abstractmethod
+    def active_engine_name(self) -> str:
+        """UI'da gösterilecek aktif motor adı (örn. 'LibreOffice', 'PyMuPDF')."""
+
     @abstractmethod
     def validate(self, source_path: Path) -> bool:
         """Kaynak dosyanın bu dönüştürücü ile uyumlu olduğunu doğrular."""

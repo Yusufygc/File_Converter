@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from core.interfaces.converter_interface import ConversionResult
 from ui.styles.theme import PALETTE
+from core.utils.resource_helper import get_resource_path
 
 
 class FileItemWidget(QWidget):
@@ -39,10 +40,12 @@ class FileItemWidget(QWidget):
         layout.setSpacing(10)
 
         # Durum ikonu
-        self._icon = QLabel("📄")
-        self._icon.setFixedWidth(22)
+        self._icon = QLabel()
+        icon_path = get_resource_path("assets/icons/file_pptx.svg")
+        self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
+        self._icon.setFixedWidth(24)
         self._icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._icon.setStyleSheet("font-size: 14px; background: transparent;")
+        self._icon.setStyleSheet("background: transparent;")
 
         # Dosya adı
         self._name_label = QLabel(self.file_path.name)
@@ -78,7 +81,6 @@ class FileItemWidget(QWidget):
         layout.addWidget(self._status_label)
 
     def set_converting(self) -> None:
-        self._icon.setText("⏳")
         self._status_label.setText("Dönüştürülüyor...")
         self._status_label.setStyleSheet(
             f"color: {PALETTE['warning']}; font-size: 11px; background: transparent; font-weight: 600;"
@@ -86,14 +88,16 @@ class FileItemWidget(QWidget):
 
     def set_result(self, result: ConversionResult) -> None:
         if result.success:
-            self._icon.setText("✅")
+            icon_path = get_resource_path("assets/icons/success.svg")
+            self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
             elapsed = f"{result.elapsed_seconds:.1f}s"
             self._status_label.setText(f"✓ Tamam  {elapsed}")
             self._status_label.setStyleSheet(
                 f"color: {PALETTE['success']}; font-size: 11px; background: transparent; font-weight: 600;"
             )
         else:
-            self._icon.setText("❌")
+            icon_path = get_resource_path("assets/icons/error.svg")
+            self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
             self._status_label.setText("Hata")
             self._status_label.setStyleSheet(
                 f"color: {PALETTE['error']}; font-size: 11px; background: transparent; font-weight: 600;"
@@ -185,5 +189,6 @@ class FileListWidget(QWidget):
 
     def reset_statuses(self) -> None:
         for widget in self._path_to_widget.values():
-            widget._icon.setText("📄")
+            icon_path = get_resource_path("assets/icons/file_pptx.svg")
+            widget._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
             widget._status_label.setText("Bekliyor")

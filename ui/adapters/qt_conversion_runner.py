@@ -1,34 +1,38 @@
 """
-Conversion Service
-==================
-SRP: Dönüşüm iş akışını orkestre eder.
-DIP: Concrete converter'lara değil IConverter soyutlamasına bağımlı.
+Qt Conversion Runner
+=====================
+`core/conversion_facade.py`'daki senkron, Qt'siz `convert_batch()`'i bir
+`QThread` içinde çalıştırır — UI thread'i asla bloklamaz.
+
+Önceden `services/conversion_service.py` içindeydi. Backend/frontend
+ayrımını fiziksel dizin yapısıyla da netleştirmek için buraya taşındı:
+`core/` artık hiçbir Qt importu barındırmaz, Qt'ye bağımlı her şey
+`ui/` altında yaşar.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Callable, Optional
+from typing import Callable, List, Optional
 
-from PySide6.QtCore import QThread, Signal, QObject
+from PySide6.QtCore import QObject, QThread, Signal
 
+from core.conversion_facade import convert_batch
 from core.interfaces.converter_interface import (
-    IConverter,
-    IConverterRegistry,
+    BatchConversionResult,
     ConversionOptions,
     ConversionResult,
-    BatchConversionResult,
+    IConverter,
+    IConverterRegistry,
 )
 
 
 class ConversionWorker(QThread):
-    """
-    Dönüşümleri arka plan thread'inde çalıştırır.
-    UI thread'i asla bloklamaz.
-    """
+    """Dönüşümleri arka plan thread'inde çalıştırır."""
 
     progress = Signal(int, int)               # (tamamlanan, toplam)
-    file_completed = Signal(ConversionResult) # her dosya bitince
+    file_completed = Signal(ConversionResult)  # her dosya bitince
     batch_completed = Signal(BatchConversionResult)
-    error_occurred = Signal(str)
 
     def __init__(
         self,
@@ -44,39 +48,31 @@ class ConversionWorker(QThread):
         self._cancelled = False
 
     def run(self) -> None:
-        batch = BatchConversionResult()
-        total = len(self._files)
-
-        for i, file_path in enumerate(self._files):
-            if self._cancelled:
-                break
-
-            result = self._converter.convert(file_path, self._options)
-            batch.results.append(result)
-            self.file_completed.emit(result)
-            self.progress.emit(i + 1, total)
-
+        batch = convert_batch(
+            self._files,
+            self._converter,
+            self._options,
+            on_progress=self.progress.emit,
+            on_file_done=self.file_completed.emit,
+            should_cancel=lambda: self._cancelled,
+        )
         self.batch_completed.emit(batch)
 
     def cancel(self) -> None:
         self._cancelled = True
 
 
-class ConversionService:
+class QtConversionRunner:
     """
-    Yüksek seviyeli dönüşüm servis katmanı.
-    UI kodundan converter detaylarını izole eder.
+    UI'ın kullandığı yüksek seviyeli servis. Converter detaylarını
+    UI kodundan izole eder; asıl dönüşüm mantığı `core.conversion_facade`'da.
     """
 
     def __init__(self, registry: IConverterRegistry):
         self._registry = registry
         self._active_worker: Optional[ConversionWorker] = None
 
-    def find_converter(
-        self,
-        source_ext: str,
-        target_ext: str,
-    ) -> Optional[IConverter]:
+    def find_converter(self, source_ext: str, target_ext: str) -> Optional[IConverter]:
         return self._registry.get(source_ext, target_ext)
 
     def start_batch_conversion(

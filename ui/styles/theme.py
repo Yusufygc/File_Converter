@@ -1,8 +1,12 @@
-"""
-Application Theme — Dark Professional
-=======================================
-Merkezi renk/stil sabitleri. Tek yerden yönetim.
-"""
+from core.utils.resource_helper import get_resource_path
+
+# CSS dostu yollar için ters bölüleri düze çevir
+def _css_path(rel_path: str) -> str:
+    abs_path = get_resource_path(rel_path)
+    return abs_path.replace("\\", "/")
+
+CHEVRON_DOWN = _css_path("assets/icons/chevron_down.svg")
+CHEVRON_UP = _css_path("assets/icons/chevron_up.svg")
 
 PALETTE = {
     "bg_primary":    "#0D0F18",
@@ -220,12 +224,9 @@ QComboBox::drop-down {{
     background: transparent;
 }}
 QComboBox::down-arrow {{
-    image: none;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid {PALETTE['text_secondary']};
+    image: url({CHEVRON_DOWN});
+    width: 12px;
+    height: 12px;
 }}
 QComboBox QAbstractItemView {{
     background-color: {PALETTE['bg_surface']}; /* Daha koyu ve opak arka plan */
@@ -262,16 +263,14 @@ QSpinBox::up-button, QSpinBox::down-button {{
     width: 16px;
 }}
 QSpinBox::up-arrow {{
-    width: 0; height: 0;
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-bottom: 4px solid {PALETTE['text_secondary']};
+    image: url({CHEVRON_UP});
+    width: 10px;
+    height: 10px;
 }}
 QSpinBox::down-arrow {{
-    width: 0; height: 0;
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-top: 4px solid {PALETTE['text_secondary']};
+    image: url({CHEVRON_DOWN});
+    width: 10px;
+    height: 10px;
 }}
 
 /* ── LineEdit ───────────────────────────────────────── */
