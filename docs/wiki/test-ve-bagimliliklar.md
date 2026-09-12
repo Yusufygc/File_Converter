@@ -3,7 +3,7 @@
 ## Testler (`tests/`)
 
 `core/` katmanı Qt'siz olduğu için testler PySide6 başlatmadan,
-milisaniyeler içinde çalışır (46 test ~1s) — bkz. [[mimari]].
+milisaniyeler içinde çalışır (96 test ~2s) — bkz. [[mimari]].
 
 ```bash
 python -m pytest tests/ -v
@@ -44,6 +44,16 @@ python -m pytest tests/ -v
   `tests/test_jpg_to_pdf_converter.py` — gerçek PyMuPDF ile; birleştirme
   (`convert_many`) ve bölme davranışları, çıktı adının kaynakla
   çakışmadığı, `isinstance(conv, IMergeConverter)` kontrolleri.
+- `tests/test_pdf_to_txt_converter.py` — gerçek PyMuPDF ile metin
+  çıkarma, çok sayfalı PDF'te sayfa ayracının doğru eklendiği.
+- `tests/test_docx_to_txt_converter.py` — gerçek `python-docx` ile
+  paragraf metni çıkarma.
+- `tests/test_office_conversions.py` — `office_conversions.py`'deki 7
+  `SimpleLibreOfficeConverter` alt sınıfı için `pytest.mark.parametrize`
+  ile ortak, LibreOffice binary'sine ihtiyaç duymayan kontroller
+  (`validate`, `is_available` tipi, uzantı/ad doğruluğu,
+  `is_parallel_safe=False`) — `test_docx_to_pdf_converter.py`'deki
+  "gerçek dönüşüm testi yok" prensibiyle aynı.
 
 `conftest.py` (proje kökü), `pytest`'in çağırılma biçiminden bağımsız
 olarak proje kökünü `sys.path`'e ekler.
@@ -73,10 +83,11 @@ pip install -r requirements-dev.txt    # geliştirmek/test için
 
 ## Harici Araç Bağımlılıkları (pip ile gelmez)
 
-- **LibreOffice** — PPTX→PDF fallback, PDF→DOCX fallback, PDF→ODT'nin
-  tek motoru. Kurulu değilse `LibreOfficeEngine.is_available()` `False`
-  döner, ilgili converter kullanıcıya kurulum linki gösterir
-  (bkz. [[libreoffice-motoru]]).
+- **LibreOffice** — PPTX→PDF fallback, PDF→DOCX fallback, PDF→ODT,
+  DOCX↔ODT ve tüm XLSX/CSV/ODS ailesinin (bkz. [[donusturucu-envanteri]]'ndeki
+  `SimpleLibreOfficeConverter` alt sınıfları) tek motoru. Kurulu
+  değilse `LibreOfficeEngine.is_available()` `False` döner, ilgili
+  converter kullanıcıya kurulum linki gösterir (bkz. [[libreoffice-motoru]]).
 - **Microsoft Office** — yalnızca Windows'ta, `pywin32` üzerinden
   PPTX→PDF'te tercih edilen motor; kurulu değilse otomatik LibreOffice'e düşer.
 

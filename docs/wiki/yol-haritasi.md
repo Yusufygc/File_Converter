@@ -46,6 +46,33 @@ birden fazla converter'ı (üç `.pdf`→`.pdf` converter'ı: sıkıştır/böl/
 sessizce ezdiği gerçek bir bug bulundu ve düzeltildi (anahtara sınıf
 adı eklendi) — bkz. [[mimari]].
 
+## Ofis Format Genişletmesi (Word/Excel/CSV/TXT) — ✅ Tamamlandı
+
+Kademe 1-2 bittikten sonra kullanıcı, Microsoft Office (Word/Excel) ve
+PDF arasında eksik kalan yaygın dönüşümleri sordu — iki geniş matris
+sunuldu (Word/PDF/TXT/RTF/ODT ve Excel/CSV/ODS/**JSON/XML**). Analiz +
+kullanıcı onayıyla kapsam **Tier A**'ya daraltıldı: mevcut
+`LibreOfficeEngine`/PyMuPDF'i yeniden kullanan, sıfır yeni bağımlılık
+gerektiren 7 dönüşüm ailesi (9 converter) eklendi:
+`PdfToTxtConverter`, `DocxToTxtConverter`, `XlsxToPdfConverter`,
+`XlsxToCsvConverter`, `CsvToXlsxConverter`, `DocxToOdtConverter`,
+`OdtToDocxConverter`, `XlsxToOdsConverter`, `OdsToXlsxConverter` —
+detay: [[donusturucu-envanteri]].
+
+**JSON ve XML bilinçli olarak tamamen dışında bırakıldı** — bunlar
+dosya-formatı dönüşümü değil **veri-dönüştürme**: farklı bir problem
+sınıfı (genel XML→tablo eşlemesi tanımsız, şemaya bağımlı). Bunları
+dahil etmek "matriste bir satır daha" gibi görünüp aslında ayrı bir
+ürün kapsamı (ETL aracı) açardı. RTF ailesi, HTML çıktıları, PDF→PPTX
+(Tier B) de düşük değer/kalite endişesiyle bu turda alınmadı.
+
+**Yan bulgu**: 7 converter'ın tamamen aynı `LibreOfficeEngine.convert_to()`
+çağrısı dışında hiçbir mantık farkı taşımadığı görülünce
+`SimpleLibreOfficeConverter` taban sınıfı çıkarıldı (bkz. [[converter-arayuzu]]) —
+her biri ~8 satıra indi. Bu, "abstract kalarak `discovery.py`'den
+kaçınma" deseninin ilk kullanımı; ileride benzer factory-tarzı
+converter grupları için referans.
+
 ## Kademe 3 — Büyük / Stratejik (mimari zaten hazır, ayrı planlama gerekir)
 
 | # | Özellik | Neden | Efor | Not |
@@ -59,14 +86,14 @@ adı eklendi) — bkz. [[mimari]].
 
 ## Önerilen "Sonraki Versiyon" Kapsamı
 
-Kademe 1 ve Kademe 2'nin tamamı (7 madde) tamamlandı. Bundan sonraki
-en doğal adım **Kademe 3, madde 14 (CLI modu)** — mimari zaten hazır
-(`core/conversion_facade.py` Qt'siz), düşük riskli/yüksek sembolik
-değerli bir adım (backend/frontend ayrımının pratikte kanıtı —
-[[paketleme]] ile birlikte artık gerçek bir exe üzerinden de
-gösterilebiliyor). Kademe 3'ün geri kalanı (OCR, şifreli PDF, harici
-plugin klasörü, sağ-tık entegrasyonu, i18n) ihtiyaç doğdukça ayrı ayrı
-değerlendirilebilir — her biri kendi ölçeğinde bir tasarım turu gerektirir.
+Kademe 1, Kademe 2 (7 madde) ve Ofis Format Genişletmesi tamamlandı.
+
+**Madde 14 (CLI modu) kullanıcı tarafından açıkça reddedildi** — bu
+turda istenmedi, Kademe 3'ün geri kalanından (OCR, şifreli PDF, harici
+plugin klasörü, sağ-tık entegrasyonu, i18n) da hiçbiri şu an gündemde
+değil. İhtiyaç doğdukça ayrı ayrı değerlendirilebilir — her biri kendi
+ölçeğinde bir tasarım turu gerektirir. Envanterdeki 19 converter'ın
+kapsamı (bkz. [[donusturucu-envanteri]]) şu an ana odak.
 
 ## İlgili Sayfalar
 

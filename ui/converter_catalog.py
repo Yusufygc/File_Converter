@@ -27,13 +27,22 @@ from core.interfaces.converter_interface import IConverter, IConverterRegistry
 _PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
     (".pptx", ".pdf"),
     (".docx", ".pdf"),
+    (".docx", ".txt"),
+    (".docx", ".odt"),
+    (".odt", ".docx"),
     (".pdf", ".docx"),
     (".pdf", ".odt"),
     (".pdf", ".jpg"),
     (".pdf", ".png"),
+    (".pdf", ".txt"),
     (".pdf", ".pdf", "PdfCompressConverter"),
     (".pdf", ".pdf", "PdfSplitConverter"),
     (".pdf", ".pdf", "PdfMergeConverter"),
+    (".xlsx", ".pdf"),
+    (".xlsx", ".csv"),
+    (".csv", ".xlsx"),
+    (".xlsx", ".ods"),
+    (".ods", ".xlsx"),
     (".jpg", ".pdf"),
 ]
 

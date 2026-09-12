@@ -43,15 +43,27 @@ def test_discovery_finds_all_shipped_converters():
     assert names == {
         "PptxToPdfConverter",
         "DocxToPdfConverter",
+        "DocxToTxtConverter",
+        "DocxToOdtConverter",
+        "OdtToDocxConverter",
         "PdfToDocxConverter",
         "PdfToOdtConverter",
         "PdfToJpgConverter",
         "PdfToPngConverter",
+        "PdfToTxtConverter",
         "PdfCompressConverter",
         "PdfMergeConverter",
         "PdfSplitConverter",
+        "XlsxToPdfConverter",
+        "XlsxToCsvConverter",
+        "CsvToXlsxConverter",
+        "XlsxToOdsConverter",
+        "OdsToXlsxConverter",
         "JpgToPdfConverter",
     }
+    # SimpleLibreOfficeConverter (soyut taban) kesinlikle keşfedilen
+    # listede olmamalı — bkz. office_conversions.py.
+    assert "SimpleLibreOfficeConverter" not in names
 
 
 def test_register_all_populates_registry_without_duplicates():

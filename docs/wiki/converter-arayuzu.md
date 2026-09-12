@@ -102,6 +102,32 @@ converter için `True` yapıp capability deseni bozardı. `MergeCapableConverter
 implemente eder. Şu an `JpgToPdfConverter` ve `PdfMergeConverter` bunu
 extend eder (bkz. [[donusturucu-envanteri]]).
 
+## Factory-Tarzı Taban Sınıflar: "Abstract Kalarak Keşiften Kaçınma"
+
+`core/converters/office_conversions.py`'deki `SimpleLibreOfficeConverter(BaseConverter)`
+— XLSX↔PDF/CSV/ODS, DOCX↔ODT gibi 7 converter'ın tamamı `LibreOfficeEngine.convert_to()`'yu
+çağırmak dışında hiçbir mantık farkı taşımıyor, yalnızca kaynak/hedef
+uzantı ve görünen ad değişiyor. Bunun için genel bir desen:
+
+- Ortak taban (`is_available`/`active_engine_name`/`unavailable_hint`/`_do_convert`)
+  tek yerde çözülür, **ama** `source_extension`/`target_extension`/
+  `display_name`'i **kasıtlı olarak implemente etmez** — bu üçü
+  `IConverter`'dan abstract kalır.
+- Sonuç: taban sınıf `inspect.isabstract()` için hâlâ `True` döner,
+  `core/converters/discovery.py` bunu (parametre almadan `cls()` ile
+  örneklemeye çalışıp `TypeError` ile çökmeden) otomatik atlar —
+  yalnızca gerçek alt sınıflar (her biri 3 property override eden
+  ~8 satır) somutlaşır ve kaydolur.
+
+Bu, `IEngineSelectable`/`IMergeConverter` gibi bir capability protokolü
+değil — sıradan bir DRY tekniği, ama `discovery.py`'nin "her concrete
+`IConverter` alt sınıfını otomatik kaydet" varsayımıyla dikkatli
+etkileşmesi gerektiği için burada belgeleniyor: **yeni bir parametrize
+edilebilir taban sınıf yazarken, `source_extension`/`target_extension`/
+`display_name`'den en az birini kasıtlı olarak abstract bırakmazsan
+discovery bunu somut bir converter sanıp `cls()` ile örneklemeye
+çalışır ve çöker.**
+
 ## Value Object'ler
 
 - `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True)` —

@@ -4,6 +4,21 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-12] [INGEST] | Ofis format genişletmesi: 9 yeni converter
+
+Word/Excel/PDF/CSV/ODT/ODS arası eksik yaygın dönüşümler eklendi
+(Tier A, kullanıcı onayıyla daraltılmış kapsam): `PdfToTxtConverter`
+(PyMuPDF), `DocxToTxtConverter` (python-docx), ve `LibreOfficeEngine`
+üzerinden 7 tanesi (`XlsxToPdfConverter`, `XlsxToCsvConverter`,
+`CsvToXlsxConverter`, `DocxToOdtConverter`, `OdtToDocxConverter`,
+`XlsxToOdsConverter`, `OdsToXlsxConverter`) — bu 7'si tek bir taban
+sınıftan (`SimpleLibreOfficeConverter`, `core/converters/office_conversions.py`)
+türer, her biri ~8 satır. **JSON/XML tamamen kapsam dışı bırakıldı**
+(veri-dönüştürme, farklı problem sınıfı — kullanıcı onayladı). CLI
+modu (Kademe 3, madde 14) kullanıcı tarafından açıkça reddedildi.
+Converter sayısı 10'dan 19'a, test sayısı 46'dan 96'ya çıktı. Detay:
+[[donusturucu-envanteri]], [[converter-arayuzu]], [[yol-haritasi]].
+
 ## [2026-09-12] [INGEST] | Kademe 2 kalan 3 madde (8, 10, 11) tamamlandı
 
 Daha önce N:1 mimari genişlemesi/LibreOffice eşzamanlılık riski
