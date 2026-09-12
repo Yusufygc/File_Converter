@@ -3,7 +3,7 @@
 ## Testler (`tests/`)
 
 `core/` katmanı Qt'siz olduğu için testler PySide6 başlatmadan,
-milisaniyeler içinde çalışır (31 test ~1s) — bkz. [[mimari]].
+milisaniyeler içinde çalışır (46 test ~1s) — bkz. [[mimari]].
 
 ```bash
 python -m pytest tests/ -v
@@ -17,11 +17,16 @@ python -m pytest tests/ -v
 - `tests/test_base_converter.py` — `validate`/`is_available`/hata sarmalama
   davranışını `FakeConverter` ile test eder.
 - `tests/test_conversion_facade.py` — `convert_batch()`'in progress/callback/
-  iptal mantığını test eder.
+  iptal mantığını; `convert_batch_parallel()`'ın tüm dosyaları işlediğini
+  ve iptalde henüz başlamamış işleri durdurduğunu (yapay gecikmeli
+  `_SlowFakeConverter` ile — aksi halde iptal penceresi deterministik
+  yakalanamaz) test eder.
 - `tests/test_registry_and_discovery.py` — `discover_converter_classes()`'in
   tüm converter'ları bulduğunu (sabit sayı değil, `discover_converter_classes()`'in
   kendisinden türetilen beklenen sayıyla karşılaştırır — yeni converter
-  eklendiğinde test kırılmaz), `register_all()`'ın idempotent olduğunu doğrular.
+  eklendiğinde test kırılmaz), `register_all()`'ın idempotent olduğunu,
+  aynı uzantı çiftini paylaşan farklı converter'ların (`tests/_fakes.py`'deki
+  `AnotherFakeConverter`) birbirini ezmediğini doğrular.
 - `tests/test_pdf_to_png_converter.py` — gerçek `PdfToPngConverter`'ı
   gerçek PyMuPDF ile uçtan uca test eder (diğerlerinin aksine
   `FakeConverter` kullanmaz) — tek/çok sayfalı PDF, geçersiz dosya reddi.
@@ -35,6 +40,10 @@ python -m pytest tests/ -v
   LibreOffice garantili değil).
 - `tests/test_file_discovery.py` — `ui/file_discovery.collect_files()`'ı
   (Qt'siz, saf pathlib mantığı) iç içe klasör yapısıyla test eder.
+- `tests/test_pdf_merge_converter.py`, `tests/test_pdf_split_converter.py`,
+  `tests/test_jpg_to_pdf_converter.py` — gerçek PyMuPDF ile; birleştirme
+  (`convert_many`) ve bölme davranışları, çıktı adının kaynakla
+  çakışmadığı, `isinstance(conv, IMergeConverter)` kontrolleri.
 
 `conftest.py` (proje kökü), `pytest`'in çağırılma biçiminden bağımsız
 olarak proje kökünü `sys.path`'e ekler.

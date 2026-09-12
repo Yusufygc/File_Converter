@@ -16,6 +16,12 @@ Varsayılanlı (override edilebilir) üyeler:
 - `accepted_extensions -> List[str]` — varsayılan `[source_extension]`;
   birden çok uzantı kabul eden converter'lar override eder (örn. `JpgToPdfConverter` → `[".jpg", ".jpeg"]`)
 - `get_output_path(source_path, options) -> Path` — `output_dir / (stem + target_extension)`
+- `is_parallel_safe -> bool` — varsayılan `False`. Yalnızca dış süreç/
+  paylaşımlı durum kullanmayan (PyMuPDF tabanlı) converter'lar `True`
+  döner — `convert_batch_parallel()`'ın (bkz. [[mimari]]) hangi
+  converter'larda kullanılacağını belirler. LibreOffice/MS Office
+  gibi harici süreçler paralel çalıştırıldığında profil/soket
+  çakışması riski taşıdığı için varsayılan sıralı kalır.
 
 `is_available`/`active_engine_name`'in **abstract** olması bilinçli bir
 tasarım kararı: önceden UI bu üyelerin var olduğunu zımnen varsayıyordu
@@ -47,7 +53,8 @@ sayısı burada override edilir.
 `BaseConverter.validate()` da somut: `accepted_extensions`'a bakarak
 dosya uzantısını kontrol eder — her converter'da ayrı ayrı yazılmaz.
 
-Şu an tüm 5 converter (bkz. [[donusturucu-envanteri]]) `BaseConverter`'dan türer.
+Şu an tüm converter'lar (bkz. [[donusturucu-envanteri]]) `BaseConverter`
+veya onu extend eden `MergeCapableConverter`'dan türer.
 
 ## `IEngineSelectable` (opsiyonel capability)
 
@@ -67,6 +74,33 @@ dönüşüm türünü (`CONV_PPTX_PDF` gibi) hardcode etmez. Şu an yalnızca
 `PptxToPdfConverter` bunu implemente eder (gerçek kullanıcı seçimi sunan
 tek converter budur; `PdfToDocxConverter` motoru otomatik seçer, salt
 okunur gösterir).
+
+## `IMergeConverter` (opsiyonel capability)
+
+`core/interfaces/merge_interface.py`. `IEngineSelectable` ile aynı desen —
+birden fazla dosyayı **TEK bir çıktıda** birleştirebilen converter'lar için:
+
+```python
+convert_many(source_paths: List[Path], options: ConversionOptions) -> ConversionResult
+```
+
+Bu, mevcut `IConverter.convert(source_path, options)`'ın 1:1
+varsayımını **hiç değiştirmeden** N:1 (çoklu girdi → tek çıktı)
+senaryosunu ekler. UI, `isinstance(converter, IMergeConverter)` ile bir
+converter'ın birleştirme modu sunup sunmadığını anlar — options
+panelinde "Tüm dosyaları TEK çıktıda birleştir" onay kutusu olarak
+görünür (bkz. [[ui-katmani]]).
+
+Somutlaştığı yer: `core/converters/base.py`'daki `MergeCapableConverter(BaseConverter)`.
+**Bilinçli olarak `BaseConverter`'ın kendisine değil, ayrı bir alt
+sınıfa eklenmiştir**: `convert_many`'i doğrudan `BaseConverter`'a koymak
+TÜM converter'lara bu metodu miras bırakırdı (çağrılmasa bile *var
+olurdu*) — bu da `isinstance(x, IMergeConverter)` kontrolünü her
+converter için `True` yapıp capability deseni bozardı. `MergeCapableConverter`,
+`BaseConverter.convert()` ile birebir aynı şablon-metot deseniyle
+`convert_many()`'i sağlar; alt sınıflar yalnızca `_do_convert_many(source_paths, output_path, options) -> Optional[ConvertOutcome]`
+implemente eder. Şu an `JpgToPdfConverter` ve `PdfMergeConverter` bunu
+extend eder (bkz. [[donusturucu-envanteri]]).
 
 ## Value Object'ler
 

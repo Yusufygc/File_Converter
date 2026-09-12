@@ -150,6 +150,19 @@ class OptionsPanelWidget(QWidget):
         self._conv_type_combo.currentIndexChanged.connect(self._on_converter_type_changed)
 
         form.addRow(_form_label("Format:"), self._conv_type_combo)
+
+        # Birleştirme onay kutusu — yalnızca IMergeConverter destekleyen
+        # converter'lar seçiliyken görünür (bkz. set_merge_mode_available).
+        self._merge_available = False
+        self._merge_label = _form_label("")
+        self._merge_check = QCheckBox("Tüm dosyaları TEK çıktıda birleştir")
+        self._merge_check.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self._merge_label.setVisible(False)
+        self._merge_check.setVisible(False)
+        form.addRow(self._merge_label, self._merge_check)
+
         return w
 
     # ── Motor formu ───────────────────────────────────────────────────── #
@@ -338,6 +351,29 @@ class OptionsPanelWidget(QWidget):
             return False
         self._conv_type_combo.setCurrentIndex(idx)
         return True
+
+    def set_merge_mode_available(self, available: bool) -> None:
+        """
+        Birleştirme onay kutusunu gösterir/gizler. `MainWindow`,
+        `isinstance(converter, IMergeConverter)` sonucuna göre çağırır.
+        Gizlenirken işaret kaldırılır — uyumsuz bir converter'a
+        geçildiğinde eski seçimin sessizce kalmasını önler.
+
+        `self._merge_available` ayrıca izlenir: `QWidget.isVisible()`
+        yalnızca `setVisible(True)` bayrağını değil, TÜM üst pencere
+        zincirinin gerçekten ekranda gösterilip gösterilmediğini de
+        yansıtır — pencere henüz `show()` edilmemişse (örn. testlerde)
+        `isVisible()` yanlışlıkla `False` döner. `is_merge_mode()` bu
+        yüzden Qt'nin görünürlüğüne değil, kendi bayrağımıza bakar.
+        """
+        self._merge_available = available
+        self._merge_label.setVisible(available)
+        self._merge_check.setVisible(available)
+        if not available:
+            self._merge_check.setChecked(False)
+
+    def is_merge_mode(self) -> bool:
+        return self._merge_available and self._merge_check.isChecked()
 
     def set_output_dir(self, path: Optional[Path]) -> None:
         """Kayıtlı çıktı klasörünü sinyal fırlatmadan geri yükler."""

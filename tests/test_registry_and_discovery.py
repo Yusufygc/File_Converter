@@ -1,6 +1,6 @@
 from core.converters.discovery import discover_converter_classes, register_all
 from core.converters.registry import ConverterRegistry
-from tests._fakes import FakeConverter
+from tests._fakes import AnotherFakeConverter, FakeConverter
 
 
 def test_registry_register_and_get():
@@ -20,6 +20,23 @@ def test_registry_all_converters_and_supported_extensions():
     assert ".foo" in reg.supported_source_extensions()
 
 
+def test_registry_keeps_multiple_converters_sharing_same_extension_pair():
+    """
+    `PdfCompressConverter`/`PdfSplitConverter`/`PdfMergeConverter` üçü de
+    `.pdf`→`.pdf` — eski (source_ext, target_ext) anahtarı bunları
+    birbirinin üzerine yazardı. Sınıf adı eklenen anahtar bunu önler.
+    """
+    reg = ConverterRegistry()
+    a = FakeConverter()
+    b = AnotherFakeConverter()
+    reg.register(a)
+    reg.register(b)
+
+    assert len(reg.all_converters()) == 2
+    assert a in reg.all_converters()
+    assert b in reg.all_converters()
+
+
 def test_discovery_finds_all_shipped_converters():
     names = {cls.__name__ for cls in discover_converter_classes()}
 
@@ -31,6 +48,8 @@ def test_discovery_finds_all_shipped_converters():
         "PdfToJpgConverter",
         "PdfToPngConverter",
         "PdfCompressConverter",
+        "PdfMergeConverter",
+        "PdfSplitConverter",
         "JpgToPdfConverter",
     }
 

@@ -4,6 +4,24 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-12] [INGEST] | Kademe 2 kalan 3 madde (8, 10, 11) tamamlandı
+
+Daha önce N:1 mimari genişlemesi/LibreOffice eşzamanlılık riski
+gerekçesiyle ertelenen 3 madde çözüldü. `IMergeConverter` (yeni
+`core/interfaces/merge_interface.py`) + `MergeCapableConverter`
+(`core/converters/base.py`) — `IEngineSelectable` ile aynı desende
+opsiyonel capability, mevcut 1:1 `convert()` akışına dokunmadı.
+`JpgToPdfConverter` genişletildi (`convert_many`), yeni `PdfMergeConverter`
+ve `PdfSplitConverter` eklendi. UI'da "Tüm dosyaları TEK çıktıda
+birleştir" onay kutusu (ayrı dropdown öğesi değil). Paralel toplu
+dönüşüm: `is_parallel_safe` (varsayılan `False`), `convert_batch_parallel()`
+yalnızca 6 PyMuPDF-tabanlı converter'da devrede — gerçek PyMuPDF ile
+denendi (10 dosya, 1.37x hızlanma, veri bozulması yok). Yan bulgu:
+`ConverterRegistry`'nin anahtar çakışması bug'ı bulunup düzeltildi
+(üç `.pdf`→`.pdf` converter'ı aynı slotu paylaşıyordu). Test sayısı
+31'den 46'ya çıktı. Detay: [[mimari]], [[converter-arayuzu]],
+[[donusturucu-envanteri]], [[ui-katmani]], [[yol-haritasi]].
+
 ## [2026-09-12] [INGEST] | Kademe 2 güvenli 4 madde tamamlandı
 
 Yol haritasındaki (bkz. [[yol-haritasi]]) 7 Kademe 2 maddesinden N:1

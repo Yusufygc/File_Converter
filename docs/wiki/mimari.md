@@ -12,21 +12,30 @@ core/                     Backend — framework-agnostic, senkron
   interfaces/
     converter_interface.py   IConverter, IConverterRegistry, value object'ler
     engine_interface.py      IEngineSelectable (opsiyonel capability)
+    merge_interface.py       IMergeConverter (opsiyonel capability, N:1)
   converters/
-    base.py                  BaseConverter (template method)
+    base.py                  BaseConverter + MergeCapableConverter (template method)
     discovery.py              Otomatik converter keşfi
-    registry.py                ConverterRegistry
+    registry.py                ConverterRegistry (anahtar: source+target+sınıf adı)
     libreoffice_engine.py       Paylaşılan LibreOffice motoru
-    pptx_to_pdf.py, pdf_to_docx.py, pdf_to_jpg.py, jpg_to_pdf.py
-  conversion_facade.py       convert_batch() — senkron, Qt'siz backend API'si
+    pptx_to_pdf.py, pdf_to_docx.py, pdf_to_jpg.py, jpg_to_pdf.py, ...
+  conversion_facade.py       convert_batch()/convert_batch_parallel()/merge_files()
+                              — senkron, Qt'siz backend API'si
 
 ui/                        Frontend — %100 PySide6
   main_window.py            Composition root / controller
   converter_catalog.py       registry'den dropdown listesi üretir
   adapters/
-    qt_conversion_runner.py   convert_batch()'i QThread'de çalıştırır
+    qt_conversion_runner.py   ConversionWorker/MergeWorker — QThread'de çalıştırır
   widgets/, dialogs/, styles/
 ```
+
+**Registry anahtarı**: `ConverterRegistry`'nin iç anahtarı yalnızca
+`(source_ext, target_ext)` değil, sınıf adını da içerir —
+`PdfCompressConverter`/`PdfSplitConverter`/`PdfMergeConverter` üçü de
+`.pdf`→`.pdf` olduğu için sınıf adı olmadan birbirini ezerlerdi (bulunan
+gerçek bir bug). Kamuya açık `register()`/`get()`/`all_converters()`
+imzaları değişmedi.
 
 ## Veri Akışı (bir dönüşüm isteği)
 
@@ -34,15 +43,22 @@ ui/                        Frontend — %100 PySide6
    (`converter_type_changed` sinyali → `IConverter` nesnesinin kendisi taşınır,
    string sabit değil — bkz. [[converter-arayuzu]]).
 2. `MainWindow._on_converter_type_changed()` bunu `self._active_converter`
-   yapar, `DropZoneWidget`'ın kabul ettiği uzantıları günceller.
+   yapar, `DropZoneWidget`'ın kabul ettiği uzantıları günceller,
+   `isinstance(converter, IMergeConverter)` ise birleştirme onay
+   kutusunu gösterir.
 3. Kullanıcı dosya sürükler/seçer → `FileListWidget`.
-4. "Dönüştür" → `MainWindow._start_conversion()` → `QtConversionRunner.start_batch_conversion()`.
-5. `QtConversionRunner`, bir `QThread` (`ConversionWorker`) içinde
-   `core.conversion_facade.convert_batch()`'i çağırır — asıl iş mantığı
-   burada, Qt bilgisi olmadan çalışır.
-6. Her dosya için `converter.convert(path, options)` → `BaseConverter`
-   template method'u → `ConversionResult`.
-7. Sonuçlar sinyallerle (`progress`, `file_completed`, `batch_completed`)
+4. "Dönüştür" → `MainWindow._start_conversion()`, iki yoldan biri:
+   - **Normal (1:N)**: `QtConversionRunner.start_batch_conversion()` →
+     `ConversionWorker` (QThread) → `converter.is_parallel_safe`'e göre
+     `convert_batch()` (sıralı) veya `convert_batch_parallel()`
+     (`ThreadPoolExecutor`, yalnızca PyMuPDF-tabanlı converter'lar) →
+     her dosya için `converter.convert(path, options)` → `ConversionResult`.
+   - **Birleştirme (N:1)**: birleştirme kutusu işaretliyse
+     `QtConversionRunner.start_merge_conversion()` → `MergeWorker` →
+     `core.conversion_facade.merge_files()` → `converter.convert_many(paths, options)`
+     → TEK bir `ConversionResult`, `BatchConversionResult(results=[result])`'a
+     sarılır (`SummaryDialog` değişmeden çalışır).
+5. Sonuçlar sinyallerle (`progress`, `file_completed`, `batch_completed`/`merge_completed`)
    UI thread'ine taşınır, `SummaryDialog` gösterilir.
 
 ## Neden bu ayrım

@@ -38,6 +38,7 @@ from ui.widgets.options_panel import OptionsPanelWidget
 from core.converters.registry import ConverterRegistry
 from core.converters.discovery import register_all
 from core.interfaces.engine_interface import IEngineSelectable
+from core.interfaces.merge_interface import IMergeConverter
 from core.utils.resource_helper import get_resource_path
 from ui.converter_catalog import catalog_entries
 
@@ -67,6 +68,7 @@ class MainWindow(QMainWindow):
         self._service = QtConversionRunner(self._registry)
         self._converting = False
         self._cancel_requested = False
+        self._last_conversion_was_merge = False
 
         # ── Window Setup ───────────────────────────────────────────
         self.setWindowTitle("FileConvert Pro")
@@ -403,6 +405,12 @@ class MainWindow(QMainWindow):
             self._active_converter.display_name.upper()
         )
 
+        # Birleştirme onay kutusu — yalnızca IMergeConverter destekleyen
+        # converter'lar seçiliyken görünür
+        self._options_panel.set_merge_mode_available(
+            isinstance(converter, IMergeConverter)
+        )
+
         # Engine bölümü güncelle — motor seçimi destekleyip desteklemediğini
         # belirli bir dönüşüm türünü hardcode etmeden, capability protokolüyle anla
         if isinstance(self._active_converter, IEngineSelectable):
@@ -491,14 +499,30 @@ class MainWindow(QMainWindow):
         self._progress_bar.setMaximum(len(files))
         self._progress_bar.setValue(0)
 
-        self._service.start_batch_conversion(
-            files=files,
-            converter=self._active_converter,
-            options=options,
-            on_progress=self._on_progress,
-            on_file_done=self._on_file_done,
-            on_batch_done=self._on_batch_done,
+        self._last_conversion_was_merge = (
+            self._options_panel.is_merge_mode()
+            and isinstance(self._active_converter, IMergeConverter)
         )
+
+        if self._last_conversion_was_merge:
+            # Birleştirme modu: N dosya → tek çıktı. Dosya-bazlı progress/
+            # durum güncellemesi anlamsız (tek bir sonuç var) — doğrudan
+            # _on_batch_done'a gider. İptal desteklenmez (bkz. MergeWorker.cancel()).
+            self._service.start_merge_conversion(
+                files=files,
+                converter=self._active_converter,
+                options=options,
+                on_done=self._on_batch_done,
+            )
+        else:
+            self._service.start_batch_conversion(
+                files=files,
+                converter=self._active_converter,
+                options=options,
+                on_progress=self._on_progress,
+                on_file_done=self._on_file_done,
+                on_batch_done=self._on_batch_done,
+            )
 
     def _on_progress(self, completed: int, total: int) -> None:
         self._progress_bar.setValue(completed)
@@ -513,7 +537,13 @@ class MainWindow(QMainWindow):
         self._set_converting_state(False)
         self._progress_bar.setValue(batch.total)
 
-        if self._cancel_requested:
+        if self._last_conversion_was_merge:
+            status = (
+                "✅ Dosyalar tek çıktıda birleştirildi"
+                if batch.all_succeeded
+                else f"⚠ Birleştirme başarısız: {batch.results[0].error_message}"
+            )
+        elif self._cancel_requested:
             total_files = len(self._file_list.all_paths())
             status = f"⚠ İptal edildi — {batch.total}/{total_files} dosya işlendi"
         elif batch.all_succeeded:

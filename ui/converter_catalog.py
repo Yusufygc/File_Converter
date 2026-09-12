@@ -16,28 +16,36 @@ listeye eklenmese de dropdown'da doğru biçimde görünmeye devam eder.
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from core.interfaces.converter_interface import IConverter, IConverterRegistry
 
-_PREFERRED_ORDER: List[Tuple[str, str]] = [
+# 2-eleman (source_ext, target_ext) çoğu durumda yeterli. 3-eleman
+# (source_ext, target_ext, class_name) yalnızca aynı uzantı çiftini
+# paylaşan birden fazla converter olduğunda (örn. üç ayrı .pdf→.pdf
+# converter'ı: sıkıştır/böl/birleştir) ayırt etmek için gerekir.
+_PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
     (".pptx", ".pdf"),
     (".docx", ".pdf"),
     (".pdf", ".docx"),
     (".pdf", ".odt"),
     (".pdf", ".jpg"),
     (".pdf", ".png"),
-    (".pdf", ".pdf"),
+    (".pdf", ".pdf", "PdfCompressConverter"),
+    (".pdf", ".pdf", "PdfSplitConverter"),
+    (".pdf", ".pdf", "PdfMergeConverter"),
     (".jpg", ".pdf"),
 ]
 
 
 def _sort_key(converter: IConverter):
-    key = (converter.source_extension, converter.target_extension)
-    try:
-        return (0, _PREFERRED_ORDER.index(key))
-    except ValueError:
-        return (1, converter.display_name)
+    two = (converter.source_extension, converter.target_extension)
+    three = (*two, converter.__class__.__name__)
+    if three in _PREFERRED_ORDER:
+        return (0, _PREFERRED_ORDER.index(three))
+    if two in _PREFERRED_ORDER:
+        return (0, _PREFERRED_ORDER.index(two))
+    return (1, converter.display_name)
 
 
 def catalog_entries(registry: IConverterRegistry) -> List[IConverter]:

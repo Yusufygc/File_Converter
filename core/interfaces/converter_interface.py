@@ -106,6 +106,18 @@ class IConverter(ABC):
     def active_engine_name(self) -> str:
         """UI'da gösterilecek aktif motor adı (örn. 'LibreOffice', 'PyMuPDF')."""
 
+    @property
+    def is_parallel_safe(self) -> bool:
+        """
+        Bu converter'ın aynı anda birden fazla dosya için (thread pool ile)
+        çalıştırılması güvenli mi. Varsayılan `False` (temkinli) — yalnızca
+        dış süreç/paylaşımlı durum kullanmayan converter'lar (örn. PyMuPDF
+        tabanlı olanlar) `True` döner. LibreOffice/MS Office gibi harici
+        süreçler paralel çalıştırıldığında profil/soket çakışması riski
+        taşıdığı için varsayılan olarak sıralı kalır (bkz. docs/wiki/libreoffice-motoru.md).
+        """
+        return False
+
     @abstractmethod
     def validate(self, source_path: Path) -> bool:
         """Kaynak dosyanın bu dönüştürücü ile uyumlu olduğunu doğrular."""

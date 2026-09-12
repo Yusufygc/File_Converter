@@ -93,3 +93,8 @@ class PdfCompressConverter(BaseConverter):
     @property
     def active_engine_name(self) -> str:
         return "PyMuPDF" if self.is_available else "Yok"
+
+    @property
+    def is_parallel_safe(self) -> bool:
+        # Yalnızca PyMuPDF kullanır — dış süreç/paylaşımlı durum yok.
+        return True

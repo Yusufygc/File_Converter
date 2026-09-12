@@ -50,3 +50,44 @@ class FakeConverter(BaseConverter):
             raise RuntimeError("boom")
         output_path.write_text(source_path.read_text())
         return None
+
+
+class AnotherFakeConverter(BaseConverter):
+    """
+    `FakeConverter` ile AYNI (source_ext, target_ext) çiftini paylaşan
+    FARKLI bir sınıf — `ConverterRegistry`'nin aynı uzantı çiftini
+    paylaşan birden fazla converter'ı kaybetmediğini test etmek için.
+    """
+
+    @property
+    def source_extension(self) -> str:
+        return ".foo"
+
+    @property
+    def target_extension(self) -> str:
+        return ".bar"
+
+    @property
+    def display_name(self) -> str:
+        return "FOO → BAR (diğer)"
+
+    @property
+    def is_available(self) -> bool:
+        return True
+
+    @property
+    def active_engine_name(self) -> str:
+        return "fake-engine-2"
+
+    @property
+    def unavailable_hint(self) -> str:
+        return "pip install fake-engine-2"
+
+    def _do_convert(
+        self,
+        source_path: Path,
+        output_path: Path,
+        options: ConversionOptions,
+    ) -> Optional[ConvertOutcome]:
+        output_path.write_text(source_path.read_text())
+        return None

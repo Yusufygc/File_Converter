@@ -21,22 +21,30 @@ metniyle birlikte, her maddenin gerçekte nasıl çözüldüğünü gösteriyor.
 
 ## Kademe 2 — Orta Vadeli (yeni converter'lar + orkestrasyon)
 
-**Durum: Güvenli 4 madde (7, 9, 12, 13) tamamlandı** — bkz. [[log]].
-Madde 8, 10, 11 **kullanıcı kararıyla ertelendi**: mevcut
-`IConverter.convert(source_path, options) -> ConversionResult`
-imzasının "1 girdi → 1 çıktı" varsayımını zorluyor (8, 10) veya
-LibreOffice eşzamanlılık riski taşıyor (11) — ayrı bir mimari tasarım
-turu gerektiriyorlar, bu turun kapsamına bilinçli olarak alınmadı.
+**Durum: ✅ 7 maddenin tamamı tamamlandı** — bkz. [[log]]. Madde 8/10
+başta N:1 mimari genişlemesi gerektirdiği için, madde 11 de LibreOffice
+eşzamanlılık riski nedeniyle ilk turda ertelenmişti; ikinci bir
+tasarım turunda çözüldü: `IMergeConverter` (`IEngineSelectable` ile
+aynı desende opsiyonel capability) mevcut 1:1 `convert()` akışına HİÇ
+dokunmadan N:1'i ekledi; paralel dönüşüm yalnızca `is_parallel_safe=True`
+(PyMuPDF-tabanlı) converter'larda etkinleştirildi, LibreOffice-tabanlı
+olanlar sıralı kaldı.
 
 | # | Özellik | Neden | Sonuç |
 |---|---|---|---|
 | 7 | **DOCX → PDF** | `LibreOfficeEngine.convert_to()` zaten iki yönlü çalışacak şekilde genel. | ✅ `DocxToPdfConverter` eklendi — bkz. [[donusturucu-envanteri]] |
-| 8 | **Çoklu görsel → tek çok-sayfalı PDF** | N girdi → 1 çıktı, mevcut 1:1 imzayı zorluyor. | ⏸️ **Ertelendi** — ayrı mimari tasarım turu gerekiyor |
+| 8 | **Çoklu görsel → tek çok-sayfalı PDF** | N girdi → 1 çıktı, mevcut 1:1 imzayı zorluyor. | ✅ `JpgToPdfConverter`, `IMergeConverter`/`MergeCapableConverter` ile genişletildi (`convert_many()`) |
 | 9 | **PDF sıkıştırma/optimize** | Kullanıcılar büyük PDF'leri küçültmek ister. | ✅ `PdfCompressConverter` eklendi (PyMuPDF `deflate`/`garbage` bayrakları, rasterize etmeden) |
-| 10 | **PDF birleştirme/bölme** | N:1/1:N, madde 8 ile aynı mimari ihtiyaç. | ⏸️ **Ertelendi** — ayrı mimari tasarım turu gerekiyor |
-| 11 | **Paralel toplu dönüşüm** | LibreOffice eşzamanlılık riski. | ⏸️ **Ertelendi** — ayrı risk değerlendirmesi gerekiyor |
+| 10 | **PDF birleştirme/bölme** | N:1/1:N, madde 8 ile aynı mimari ihtiyaç. | ✅ `PdfMergeConverter` (`IMergeConverter`) + `PdfSplitConverter` (mevcut 1:N modeline zaten oturuyordu) eklendi |
+| 11 | **Paralel toplu dönüşüm** | LibreOffice eşzamanlılık riski. | ✅ `convert_batch_parallel()` eklendi, yalnızca `is_parallel_safe=True` converter'larda (6 PyMuPDF-tabanlı) kullanılıyor; gerçek PyMuPDF ile denendi (10 dosya, 1.37x hızlanma, veri bozulması yok) |
 | 12 | **Klasör sürükle-bırak (recursive)** | Yalnızca tekil dosyalar kabul ediliyordu. | ✅ `ui/file_discovery.py` (`collect_files()`) + `DropZoneWidget` güncellendi |
 | 13 | **Açık/koyu tema geçişi** | `PALETTE` merkezi tek sözlük, ikinci bir palet eklemek mantıklı. | ✅ `LIGHT_PALETTE` + `AppSettings` tema tercihi eklendi — **yeniden başlatınca uygulanır** (canlı geçiş değil, bkz. [[ui-katmani]]) |
+
+**Yan bulgu**: N:1 çalışması sırasında `ConverterRegistry`'nin
+`(source_ext, target_ext)` anahtarının aynı uzantı çiftini paylaşan
+birden fazla converter'ı (üç `.pdf`→`.pdf` converter'ı: sıkıştır/böl/birleştir)
+sessizce ezdiği gerçek bir bug bulundu ve düzeltildi (anahtara sınıf
+adı eklendi) — bkz. [[mimari]].
 
 ## Kademe 3 — Büyük / Stratejik (mimari zaten hazır, ayrı planlama gerekir)
 
@@ -51,23 +59,14 @@ turu gerektiriyorlar, bu turun kapsamına bilinçli olarak alınmadı.
 
 ## Önerilen "Sonraki Versiyon" Kapsamı
 
-Kademe 1 ve Kademe 2'nin güvenli 4 maddesi (7, 9, 12, 13) tamamlandı.
-Bundan sonraki iki gerçek seçenek:
-
-1. **Madde 14 (CLI modu)** — mimari zaten hazır (`core/conversion_facade.py`
-   Qt'siz), düşük riskli/yüksek sembolik değerli bir adım
-   (backend/frontend ayrımının pratikte kanıtı — [[paketleme]] ile
-   birlikte artık gerçek bir exe üzerinden de gösterilebiliyor).
-2. **N:1 mimari tasarım turu** — madde 8 (çoklu görsel→tek PDF) ve
-   madde 10'u (PDF birleştirme/bölme) gerçekten çözmek isteniyorsa,
-   `IConverter.convert(source_path, options) -> ConversionResult`
-   imzasının 1:1 varsayımını genişletmek için ayrı, odaklı bir tasarım
-   oturumu gerekir (yeni bir arayüz mü, yoksa `MainWindow`'da özel bir
-   yol mu — bu rapor kapsamında karar verilmedi).
-
-Madde 11 (paralel dönüşüm) için ayrı bir risk değerlendirmesi
-(özellikle LibreOffice eşzamanlılığı) önerilir, tek başına ele
-alınabilir.
+Kademe 1 ve Kademe 2'nin tamamı (7 madde) tamamlandı. Bundan sonraki
+en doğal adım **Kademe 3, madde 14 (CLI modu)** — mimari zaten hazır
+(`core/conversion_facade.py` Qt'siz), düşük riskli/yüksek sembolik
+değerli bir adım (backend/frontend ayrımının pratikte kanıtı —
+[[paketleme]] ile birlikte artık gerçek bir exe üzerinden de
+gösterilebiliyor). Kademe 3'ün geri kalanı (OCR, şifreli PDF, harici
+plugin klasörü, sağ-tık entegrasyonu, i18n) ihtiyaç doğdukça ayrı ayrı
+değerlendirilebilir — her biri kendi ölçeğinde bir tasarım turu gerektirir.
 
 ## İlgili Sayfalar
 

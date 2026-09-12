@@ -1,14 +1,14 @@
 """
-JPG → PDF Converter
-====================
-PyMuPDF (fitz) ile tek bir görseli tek sayfalı PDF'e sarar.
-Tek motor var (Strategy deseni gerekmiyor).
+PDF Birleştirme
+=================
+PyMuPDF (fitz) ile birden fazla PDF'i tek bir dosyada birleştirir.
+`IMergeConverter` capability'sini (`MergeCapableConverter` üzerinden)
+destekler — UI'da "Tüm dosyaları TEK çıktıda birleştir" onay kutusuyla
+sunulur. Tekil dosya modunda (`convert()`) "1 dosyayı birleştirmek"
+dejenere ama tutarlı bir durumdur: dosyanın kendisinin bir kopyası
+üretilir — aynı `_merge()` yardımcı metodu her iki modda da kullanılır.
 
-Ayrıca `IMergeConverter` capability'sini de destekler (`MergeCapableConverter`
-üzerinden): birden fazla görsel tek bir çok sayfalı PDF'e birleştirilebilir
-— UI'da bu, "Tüm dosyaları TEK çıktıda birleştir" onay kutusuyla sunulur.
-
-SRP : Yalnızca JPG → PDF dönüşümünden sorumlu.
+SRP : Yalnızca PDF birleştirmeden sorumlu.
 """
 
 from __future__ import annotations
@@ -20,12 +20,8 @@ from core.converters.base import ConvertOutcome, MergeCapableConverter
 from core.interfaces.converter_interface import ConversionOptions
 
 
-class JpgToPdfConverter(MergeCapableConverter):
-    """
-    JPG → PDF dönüştürücü. Hem .jpg hem .jpeg kabul eder.
-    Tekil modda her görsel kendi tek sayfalı PDF'ine dönüştürülür;
-    birleştirme modunda tüm görseller tek çok sayfalı PDF'e sarılır.
-    """
+class PdfMergeConverter(MergeCapableConverter):
+    """PDF → PDF (birleştirilmiş) dönüştürücü."""
 
     # ------------------------------------------------------------------ #
     #  IConverter interface                                                #
@@ -33,7 +29,7 @@ class JpgToPdfConverter(MergeCapableConverter):
 
     @property
     def source_extension(self) -> str:
-        return ".jpg"
+        return ".pdf"
 
     @property
     def target_extension(self) -> str:
@@ -41,11 +37,11 @@ class JpgToPdfConverter(MergeCapableConverter):
 
     @property
     def display_name(self) -> str:
-        return "JPG → PDF"
+        return "PDF Birleştir"
 
-    @property
-    def accepted_extensions(self) -> List[str]:
-        return [".jpg", ".jpeg"]
+    def get_output_path(self, source_path: Path, options: ConversionOptions) -> Path:
+        out_dir = options.output_dir or source_path.parent
+        return out_dir / f"{source_path.stem}_birlesik.pdf"
 
     def _do_convert(
         self,
@@ -53,21 +49,8 @@ class JpgToPdfConverter(MergeCapableConverter):
         output_path: Path,
         options: ConversionOptions,
     ) -> Optional[ConvertOutcome]:
-        import fitz
-
-        img_doc = fitz.open(str(source_path))
-        try:
-            pdf_bytes = img_doc.convert_to_pdf()
-        finally:
-            img_doc.close()
-
-        pdf_doc = fitz.open("pdf", pdf_bytes)
-        try:
-            pdf_doc.save(str(output_path))
-        finally:
-            pdf_doc.close()
-
-        return ConvertOutcome(page_count=1)
+        page_count = self._merge([source_path], output_path)
+        return ConvertOutcome(page_count=page_count)
 
     def _do_convert_many(
         self,
@@ -75,28 +58,26 @@ class JpgToPdfConverter(MergeCapableConverter):
         output_path: Path,
         options: ConversionOptions,
     ) -> Optional[ConvertOutcome]:
+        page_count = self._merge(source_paths, output_path)
+        return ConvertOutcome(page_count=page_count)
+
+    @staticmethod
+    def _merge(source_paths: List[Path], output_path: Path) -> int:
+        """Verilen PDF'leri sırayla tek bir belgede birleştirir, sayfa sayısını döner."""
         import fitz
 
         doc = fitz.open()
         try:
             for p in source_paths:
-                img_doc = fitz.open(str(p))
+                src = fitz.open(str(p))
                 try:
-                    pdf_bytes = img_doc.convert_to_pdf()
+                    doc.insert_pdf(src)
                 finally:
-                    img_doc.close()
-
-                page_pdf = fitz.open("pdf", pdf_bytes)
-                try:
-                    doc.insert_pdf(page_pdf)
-                finally:
-                    page_pdf.close()
-
+                    src.close()
             doc.save(str(output_path))
+            return doc.page_count
         finally:
             doc.close()
-
-        return ConvertOutcome(page_count=len(source_paths))
 
     @property
     def unavailable_hint(self) -> str:

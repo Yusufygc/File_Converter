@@ -28,6 +28,12 @@ Composition root / controller. Sorumlulukları:
 - Tema butonu (`_theme_btn`, header'da `🌙`/`☀️`) — `_on_theme_toggle_clicked()`
   tercihi `AppSettings.save_theme_mode()` ile kaydeder, "yeniden
   başlatınca uygulanır" mesajı gösterir (canlı geçiş yok, bkz. `ui/styles/theme.py`).
+- Birleştirme modu — `isinstance(active_converter, IMergeConverter)` ise
+  options panelindeki onay kutusu görünür olur. İşaretliyse
+  `_start_conversion()`, `start_batch_conversion()` yerine
+  `QtConversionRunner.start_merge_conversion()`'ı çağırır
+  (`self._last_conversion_was_merge` bayrağı, `_on_batch_done()`'ın
+  doğru durum mesajını seçmesi için — iptal mesajıyla karışmasın diye).
 
 ## `ui/converter_catalog.py`
 
@@ -38,10 +44,19 @@ Composition root / controller. Sorumlulukları:
 
 ## `ui/adapters/qt_conversion_runner.py`
 
-`ConversionWorker(QThread)` + `QtConversionRunner`. `core.conversion_facade.convert_batch()`'i
-arka planda çalıştırıp `progress`/`file_completed`/`batch_completed`
-sinyalleriyle UI thread'ine rapor eder. Önceden `services/conversion_service.py`
-içindeydi — backend/frontend ayrımını netleştirmek için buraya taşındı.
+- `ConversionWorker(QThread)` + `QtConversionRunner.start_batch_conversion()` —
+  `converter.is_parallel_safe`'e göre `core.conversion_facade.convert_batch()`
+  (sıralı) veya `convert_batch_parallel()` (`ThreadPoolExecutor`) çağırır,
+  `progress`/`file_completed`/`batch_completed` sinyalleriyle UI thread'ine
+  rapor eder. Önceden `services/conversion_service.py` içindeydi —
+  backend/frontend ayrımını netleştirmek için buraya taşındı.
+- `MergeWorker(QThread)` + `QtConversionRunner.start_merge_conversion()` —
+  `core.conversion_facade.merge_files()`'ı çağırır, tek `ConversionResult`'ı
+  `BatchConversionResult(results=[result])`'a sararak `merge_completed`
+  sinyaliyle yayınlar (`SummaryDialog` değişmeden çalışır).
+  `cancel()` no-op'tur — birleştirme tek parça bir işlemdir, yarıda
+  kesilemez; `QtConversionRunner.cancel()`'ın worker türünden bağımsız
+  çağırdığı `.cancel()`'ın hata fırlatmamasını sağlar.
 
 ## `ui/app_settings.py`
 
@@ -86,6 +101,8 @@ edecek şekilde güncellendi.
   formu. `converter_type_changed` sinyali artık bir `IConverter` nesnesi
   taşır (string değil). `select_converter()`/`set_output_dir()`/
   `set_quality_options()` — `AppSettings` restore akışı için genel API.
+  `set_merge_mode_available()`/`is_merge_mode()` — birleştirme onay
+  kutusunu yönetir (bkz. [[converter-arayuzu]]'ndeki `IMergeConverter`).
 
 ## `ui/dialogs/summary_dialog.py`
 
