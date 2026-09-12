@@ -1,0 +1,83 @@
+# Converter Arayüzü
+
+`core/interfaces/converter_interface.py` ve `core/converters/base.py`,
+tüm dönüştürücülerin uyduğu sözleşmeyi tanımlar.
+
+## `IConverter` (ABC)
+
+Zorunlu üyeler:
+- `source_extension -> str`, `target_extension -> str`, `display_name -> str`
+- `is_available -> bool` — gerekli motor/araç sistemde var mı
+- `active_engine_name -> str` — UI'da gösterilecek motor adı
+- `validate(source_path) -> bool`
+- `convert(source_path, options) -> ConversionResult`
+
+Varsayılanlı (override edilebilir) üyeler:
+- `accepted_extensions -> List[str]` — varsayılan `[source_extension]`;
+  birden çok uzantı kabul eden converter'lar override eder (örn. `JpgToPdfConverter` → `[".jpg", ".jpeg"]`)
+- `get_output_path(source_path, options) -> Path` — `output_dir / (stem + target_extension)`
+
+`is_available`/`active_engine_name`'in **abstract** olması bilinçli bir
+tasarım kararı: önceden UI bu üyelerin var olduğunu zımnen varsayıyordu
+(`getattr` ile savunmacı okunan `accepted_extensions` hariç), şimdi arayüz
+bunu garanti ediyor — yeni bir converter yazan biri bunları implemente
+etmeden `IConverter`'ı somutlaştıramaz.
+
+## `BaseConverter` (template method)
+
+`core/converters/base.py`. `IConverter`'ı implemente eder, ortak akışı
+(`validate` → `is_available` kontrolü → zamanlama → try/except →
+`ConversionResult` üretimi) tek yerde toplar. Alt sınıflar yalnızca:
+
+```python
+def _do_convert(self, source_path, output_path, options) -> Optional[ConvertOutcome]:
+    ...  # asıl dönüşüm mantığı, hata durumunda Exception fırlatır
+
+@property
+def unavailable_hint(self) -> str:
+    ...  # is_available False iken kullanıcıya gösterilecek kurulum ipucu
+```
+
+`ConvertOutcome(output_path=None, page_count=0)` — `_do_convert()`'in
+döndürdüğü opsiyonel sonuç. `None` dönerse şablon metodun hesapladığı
+`output_path` ve `page_count=0` kullanılır. Çok sayfalı çıktı üreten
+`PdfToJpgConverter` gibi durumlarda gerçek ilk-sayfa yolu ve toplam sayfa
+sayısı burada override edilir.
+
+`BaseConverter.validate()` da somut: `accepted_extensions`'a bakarak
+dosya uzantısını kontrol eder — her converter'da ayrı ayrı yazılmaz.
+
+Şu an tüm 5 converter (bkz. [[donusturucu-envanteri]]) `BaseConverter`'dan türer.
+
+## `IEngineSelectable` (opsiyonel capability)
+
+`core/interfaces/engine_interface.py`. `typing.Protocol` (yapısal/duck-typing
+sözleşme, `runtime_checkable`). Birden fazla motor arasında **kullanıcının
+elle seçim yapabildiği** converter'lar için:
+
+```python
+active_engine -> Any
+available_engines() -> List[Any]
+set_preferred_engine(engine: Any) -> bool
+```
+
+UI, bir converter'ın motor seçimi sunup sunmadığını
+`isinstance(converter, IEngineSelectable)` ile anlar — belirli bir
+dönüşüm türünü (`CONV_PPTX_PDF` gibi) hardcode etmez. Şu an yalnızca
+`PptxToPdfConverter` bunu implemente eder (gerçek kullanıcı seçimi sunan
+tek converter budur; `PdfToDocxConverter` motoru otomatik seçer, salt
+okunur gösterir).
+
+## Value Object'ler
+
+- `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True)` —
+  `dpi` LibreOffice render'ı ve PDF→JPG rasterizasyon çözünürlüğü için;
+  `quality` yalnızca PDF→JPG'nin JPEG sıkıştırması için kullanılır.
+- `ConversionResult(source_path, output_path, success, error_message, page_count, elapsed_seconds)`
+- `BatchConversionResult(results: List[ConversionResult])` — `total`/`success_count`/`failure_count`/`all_succeeded` property'leri
+
+## İlgili Sayfalar
+
+- [[mimari]] — bu arayüzün genel mimarideki yeri
+- [[converter-ekleme]] — bu arayüzü kullanarak yeni converter yazma
+- [[donusturucu-envanteri]] — mevcut implementasyonlar
