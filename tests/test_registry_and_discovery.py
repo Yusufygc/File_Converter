@@ -28,13 +28,16 @@ def test_discovery_finds_all_shipped_converters():
         "PdfToDocxConverter",
         "PdfToOdtConverter",
         "PdfToJpgConverter",
+        "PdfToPngConverter",
         "JpgToPdfConverter",
     }
 
 
 def test_register_all_populates_registry_without_duplicates():
+    expected_count = len(discover_converter_classes())
+
     reg = ConverterRegistry()
     register_all(reg)
     register_all(reg)  # iki kez çağırmak yeniden kayıt (overwrite) yapmalı, çoğaltmamalı
 
-    assert len(reg.all_converters()) == 5
+    assert len(reg.all_converters()) == expected_count

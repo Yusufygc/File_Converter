@@ -64,8 +64,6 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
 ## Bilinçli Kapsam-Dışı Kararlar
 
 Aşağıdakiler bilinerek ertelenmiştir, "unutulmuş" değildir:
-- `FileItemWidget` dosya ikonu her zaman `file_pptx.svg` — dosya türüne
-  göre değişmiyor (bkz. [[ui-katmani]]).
 - `ConversionOptions` tek düz bir "options bag" — hangi converter hangi
   alanı kullandığı yalnızca [[converter-arayuzu]] sayfasında belgeleniyor,
   arayüz seviyesinde zorlanmıyor.

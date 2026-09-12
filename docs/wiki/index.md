@@ -12,20 +12,25 @@ bkz. proje kökündeki `CLAUDE.md`.
 ## Converter Sistemi
 
 - [[converter-ekleme]] — yeni dönüşüm türü ekleme rehberi (tak-çıkar mimari)
-- [[donusturucu-envanteri]] — mevcut 5 converter'ın tablosu (motor, davranış)
+- [[donusturucu-envanteri]] — mevcut converter'ların tablosu (motor, davranış)
 - [[libreoffice-motoru]] — paylaşılan `LibreOfficeEngine`, `--infilter` gerekliliği
 
 ## UI Katmanı
 
-- [[ui-katmani]] — `MainWindow`, widget'lar, `QtConversionRunner`, `converter_catalog`
+- [[ui-katmani]] — `MainWindow`, widget'lar, `QtConversionRunner`, `converter_catalog`, `AppSettings`
 
 ## Test & Bağımlılıklar
 
-- [[test-ve-bagimliliklar]] — `tests/` yapısı, `requirements*.txt`, harici araçlar
+- [[test-ve-bagimliliklar]] — `tests/` yapısı, `requirements*.txt`, harici araçlar, CI
+- [[paketleme]] — PyInstaller ile dağıtılabilir exe üretme
 
 ## Kurallar
 
 - [[rules]] — kodlama kuralları, commit kuralları, bilinçli kapsam-dışı kararlar
+
+## Yol Haritası
+
+- [[yol-haritasi]] — yeni versiyon için kademeli özellik/geliştirme önerileri
 
 ---
 

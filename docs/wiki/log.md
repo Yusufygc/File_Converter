@@ -4,6 +4,22 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-12] [INGEST] | Kademe 1 tamamlandı
+
+Yol haritasındaki (bkz. [[yol-haritasi]]) 6 hızlı-kazanım maddesi
+uygulandı: iptal butonu (tek buton toggle), `PdfToPngConverter`,
+dosya türü ikonları (`ui/icon_map.py`), `AppSettings` (QSettings ile
+pencere/converter/seçenek kalıcılığı), `.github/workflows/test.yml`
+(CI), `fileconvert.spec` (PyInstaller — gerçek bir build ile
+`dist/FileConvertPro/FileConvertPro.exe` üretilip başlatılarak
+doğrulandı). Test sayısı 14'ten 18'e çıktı. Detay: [[ui-katmani]],
+[[donusturucu-envanteri]], [[paketleme]], [[test-ve-bagimliliklar]].
+
+## [2026-09-12] [DOCS] | Yol haritası raporu eklendi
+
+Yeni versiyon için kademeli (hızlı kazanım / orta vadeli / stratejik)
+özellik önerileri raporu yazıldı — bkz. [[yol-haritasi]].
+
 ## [2026-09-12] [DOCS] | Wiki mekanizması kuruldu
 
 `docs/wiki/` altında bu bilgi tabanı ve proje kökünde `CLAUDE.md`

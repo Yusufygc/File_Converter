@@ -3,7 +3,7 @@
 ## Testler (`tests/`)
 
 `core/` katmanı Qt'siz olduğu için testler PySide6 başlatmadan,
-milisaniyeler içinde çalışır (14 test ~0.5s) — bkz. [[mimari]].
+milisaniyeler içinde çalışır (18 test ~1s) — bkz. [[mimari]].
 
 ```bash
 python -m pytest tests/ -v
@@ -19,8 +19,12 @@ python -m pytest tests/ -v
 - `tests/test_conversion_facade.py` — `convert_batch()`'in progress/callback/
   iptal mantığını test eder.
 - `tests/test_registry_and_discovery.py` — `discover_converter_classes()`'in
-  gerçek 5 converter'ı bulduğunu, `register_all()`'ın idempotent olduğunu
-  doğrular.
+  tüm converter'ları bulduğunu (sabit sayı değil, `discover_converter_classes()`'in
+  kendisinden türetilen beklenen sayıyla karşılaştırır — yeni converter
+  eklendiğinde test kırılmaz), `register_all()`'ın idempotent olduğunu doğrular.
+- `tests/test_pdf_to_png_converter.py` — gerçek `PdfToPngConverter`'ı
+  gerçek PyMuPDF ile uçtan uca test eder (diğerlerinin aksine
+  `FakeConverter` kullanmaz) — tek/çok sayfalı PDF, geçersiz dosya reddi.
 
 `conftest.py` (proje kökü), `pytest`'in çağırılma biçiminden bağımsız
 olarak proje kökünü `sys.path`'e ekler.
@@ -28,11 +32,20 @@ olarak proje kökünü `sys.path`'e ekler.
 **Kural**: `core/`'a eklenen her yeni mantık için buraya Qt gerektirmeyen
 bir test eklenir — bkz. [[rules]].
 
+## CI (GitHub Actions)
+
+`.github/workflows/test.yml` — her `push`/`pull_request`'te `ubuntu-latest`
+üzerinde `pip install -r requirements-dev.txt` + `pytest tests/ -v` çalışır.
+Testler hiç Qt import etmediği ve `pywin32` Linux'ta ortam işaretiyle
+atlandığı için Linux runner yeterli — mimarinin "Qt'siz `core/`" iddiasını
+her push'ta otomatik doğrular (bkz. [[mimari]]).
+
 ## Python Bağımlılıkları
 
 - `requirements.txt` — çalışma zamanı: `PySide6`, `pdf2docx`, `PyMuPDF`,
   `python-docx`, `pywin32` (yalnızca `sys_platform == "win32"`).
-- `requirements-dev.txt` — `requirements.txt` + `pytest`.
+- `requirements-dev.txt` — `requirements.txt` + `pytest` + `pyinstaller`
+  (bkz. [[paketleme]]).
 
 ```bash
 pip install -r requirements.txt        # çalıştırmak için
@@ -56,3 +69,4 @@ gerektirmez — `pip install`'la gelir.
 - [[mimari]] — Qt'siz `core/`'un test edilebilirliğe katkısı
 - [[rules]] — test yazma kuralı
 - [[donusturucu-envanteri]] — hangi converter hangi harici araca bağımlı
+- [[paketleme]] — bu bağımlılıkların dağıtılabilir exe'ye paketlenmesi

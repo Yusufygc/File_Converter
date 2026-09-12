@@ -29,6 +29,7 @@ from core.interfaces.converter_interface import (
     IConverter,
 )
 from ui.adapters.qt_conversion_runner import QtConversionRunner
+from ui.app_settings import AppSettings
 from ui.dialogs.summary_dialog import SummaryDialog
 from ui.styles.theme import PALETTE
 from ui.widgets.drop_zone import DropZoneWidget
@@ -49,6 +50,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self._settings = AppSettings()
+
         # ── Dependency Composition ─────────────────────────────────
         # Converter'lar elle import/instantiate edilmez — core/converters/
         # paketi otomatik taranır (bkz. discovery.py). Yeni bir dönüşüm
@@ -62,6 +65,8 @@ class MainWindow(QMainWindow):
         self._active_converter: IConverter = self._converters[0]
 
         self._service = QtConversionRunner(self._registry)
+        self._converting = False
+        self._cancel_requested = False
 
         # ── Window Setup ───────────────────────────────────────────
         self.setWindowTitle("FileConvert Pro")
@@ -76,9 +81,47 @@ class MainWindow(QMainWindow):
 
         # Converter türleri event loop başladıktan sonra eklenir —
         # DPI bağlamı o noktada hazır olur, QFont uyarısı oluşmaz.
-        QTimer.singleShot(
-            0, lambda: self._options_panel.populate_converter_types(self._converters)
+        QTimer.singleShot(0, self._on_ui_ready)
+
+    def _on_ui_ready(self) -> None:
+        self._options_panel.populate_converter_types(self._converters)
+        self._restore_settings()
+
+    def _restore_settings(self) -> None:
+        """Önceki oturumdan kalan pencere/dönüşüm türü/seçenek durumunu geri yükler."""
+        geometry = self._settings.load_window_geometry()
+        if geometry:
+            self.restoreGeometry(geometry)
+
+        converter_key = self._settings.load_converter_key()
+        if converter_key:
+            match = next(
+                (
+                    c for c in self._converters
+                    if (c.source_extension, c.target_extension) == converter_key
+                ),
+                None,
+            )
+            if match is not None:
+                self._options_panel.select_converter(match)
+
+        self._options_panel.set_output_dir(self._settings.load_output_dir())
+        dpi, quality, overwrite = self._settings.load_quality_options()
+        self._options_panel.set_quality_options(dpi, quality, overwrite)
+
+    def closeEvent(self, event) -> None:
+        """Pencere kapanırken mevcut durumu kalıcı olarak saklar."""
+        self._settings.save_window_geometry(self.saveGeometry())
+        self._settings.save_converter_key(
+            self._active_converter.source_extension,
+            self._active_converter.target_extension,
         )
+        options = self._options_panel.get_options()
+        self._settings.save_output_dir(options.output_dir)
+        self._settings.save_quality_options(
+            options.dpi, options.quality, options.overwrite_existing
+        )
+        super().closeEvent(event)
 
     # ================================================================== #
     #  UI Construction                                                     #
@@ -309,7 +352,7 @@ class MainWindow(QMainWindow):
         self._drop_zone.files_dropped.connect(self._on_files_dropped)
         self._file_list.list_changed.connect(self._on_list_changed)
         self._file_list.selection_changed.connect(self._on_selection_changed)
-        self._convert_btn.clicked.connect(self._start_conversion)
+        self._convert_btn.clicked.connect(self._on_convert_button_clicked)
         self._options_panel.engine_changed.connect(self._on_engine_changed)
         self._options_panel.converter_type_changed.connect(self._on_converter_type_changed)
 
@@ -385,6 +428,19 @@ class MainWindow(QMainWindow):
     def _on_selection_changed(self, count: int) -> None:
         self._remove_btn.setEnabled(count > 0)
 
+    def _on_convert_button_clicked(self) -> None:
+        """
+        Dönüştür/İptal Et butonu tek bir buton — davranışı `self._converting`
+        durumuna göre dallanır (ayrı bir iptal butonu eklemek yerine daha
+        az arayüz kalabalığı).
+        """
+        if self._converting:
+            self._cancel_requested = True
+            self._service.cancel()
+            self._convert_btn.setEnabled(False)  # durana kadar tekrar tıklamayı engelle
+        else:
+            self._start_conversion()
+
     def _start_conversion(self) -> None:
         files = self._file_list.all_paths()
         if not files:
@@ -401,6 +457,7 @@ class MainWindow(QMainWindow):
             return
 
         options = self._options_panel.get_options()
+        self._cancel_requested = False
         self._set_converting_state(True)
         self._file_list.reset_statuses()
         self._progress_bar.setMaximum(len(files))
@@ -428,11 +485,13 @@ class MainWindow(QMainWindow):
         self._set_converting_state(False)
         self._progress_bar.setValue(batch.total)
 
-        status = (
-            f"✅ {batch.success_count}/{batch.total} dosya başarıyla dönüştürüldü"
-            if batch.all_succeeded
-            else f"⚠ {batch.success_count} başarılı, {batch.failure_count} hatalı"
-        )
+        if self._cancel_requested:
+            total_files = len(self._file_list.all_paths())
+            status = f"⚠ İptal edildi — {batch.total}/{total_files} dosya işlendi"
+        elif batch.all_succeeded:
+            status = f"✅ {batch.success_count}/{batch.total} dosya başarıyla dönüştürüldü"
+        else:
+            status = f"⚠ {batch.success_count} başarılı, {batch.failure_count} hatalı"
         self._status_label.setText(status)
 
         dialog = SummaryDialog(batch, self)
@@ -450,11 +509,24 @@ class MainWindow(QMainWindow):
     # ================================================================== #
 
     def _set_converting_state(self, converting: bool) -> None:
-        self._convert_btn.setEnabled(not converting)
+        self._converting = converting
+
+        if converting:
+            self._convert_btn.setText("✕   İptal Et")
+            self._convert_btn.setObjectName("dangerBtn")
+        else:
+            self._convert_btn.setText("⚡   Dönüştür")
+            self._convert_btn.setObjectName("primaryBtn")
+        # objectName değişince QSS yeniden uygulanmalı (bkz. drop_zone._refresh_style deseni)
+        self._convert_btn.style().unpolish(self._convert_btn)
+        self._convert_btn.style().polish(self._convert_btn)
+        self._convert_btn.setEnabled(True)
+
         self._progress_bar.setVisible(converting)
         self._drop_zone.setEnabled(not converting)
 
     def _update_ui_state(self) -> None:
         has_files = self._file_list.count() > 0
-        self._convert_btn.setEnabled(has_files)
+        if not self._converting:
+            self._convert_btn.setEnabled(has_files)
         self._clear_btn.setEnabled(has_files)

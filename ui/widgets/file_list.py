@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from core.interfaces.converter_interface import ConversionResult
 from ui.styles.theme import PALETTE
 from core.utils.resource_helper import get_resource_path
+from ui.icon_map import icon_path_for
 
 
 class FileItemWidget(QWidget):
@@ -39,9 +40,9 @@ class FileItemWidget(QWidget):
         layout.setContentsMargins(6, 2, 6, 2)
         layout.setSpacing(10)
 
-        # Durum ikonu
+        # Durum ikonu — dosya uzantısına göre (bkz. ui/icon_map.py)
         self._icon = QLabel()
-        icon_path = get_resource_path("assets/icons/file_pptx.svg")
+        icon_path = icon_path_for(self.file_path.suffix)
         self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
         self._icon.setFixedWidth(24)
         self._icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -189,6 +190,6 @@ class FileListWidget(QWidget):
 
     def reset_statuses(self) -> None:
         for widget in self._path_to_widget.values():
-            icon_path = get_resource_path("assets/icons/file_pptx.svg")
+            icon_path = icon_path_for(widget.file_path.suffix)
             widget._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
             widget._status_label.setText("Bekliyor")

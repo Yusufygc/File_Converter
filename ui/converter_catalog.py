@@ -25,6 +25,7 @@ _PREFERRED_ORDER: List[Tuple[str, str]] = [
     (".pdf", ".docx"),
     (".pdf", ".odt"),
     (".pdf", ".jpg"),
+    (".pdf", ".png"),
     (".jpg", ".pdf"),
 ]
 

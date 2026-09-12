@@ -1,7 +1,7 @@
 # Dönüştürücü Envanteri
 
 `core/converters/` altında [[converter-ekleme]] tarafından otomatik
-keşfedilen 5 converter. Sıra, `ui/converter_catalog.py`'deki
+keşfedilen 6 converter. Sıra, `ui/converter_catalog.py`'deki
 `_PREFERRED_ORDER` ile aynı (varsayılan dropdown sırası).
 
 | Converter | Kaynak → Hedef | Motor(lar) | `IEngineSelectable` | Özel davranış |
@@ -10,6 +10,7 @@ keşfedilen 5 converter. Sıra, `ui/converter_catalog.py`'deki
 | `PdfToDocxConverter` | `.pdf` → `.docx` | pdf2docx → LibreOffice fallback | ❌ Hayır (otomatik seçer) | `pdf2docx` yalnızca `.docx` üretir, ODT'ye düşemez |
 | `PdfToOdtConverter` | `.pdf` → `.odt` | Yalnızca LibreOffice | ❌ Hayır | — |
 | `PdfToJpgConverter` | `.pdf` → `.jpg` | PyMuPDF (`fitz`) | ❌ Hayır (tek motor) | **Çok sayfalı PDF'te her sayfa ayrı dosya**: `ad_p1.jpg, ad_p2.jpg, ...`; tek sayfada `ad.jpg`. `options.dpi` render çözünürlüğü, `options.quality` JPEG kalitesi |
+| `PdfToPngConverter` | `.pdf` → `.png` | PyMuPDF (`fitz`) | ❌ Hayır (tek motor) | `PdfToJpgConverter` ile aynı rasterizasyon mantığı (çok sayfada `_p{n}` suffix); PNG kayıpsız olduğu için `options.quality` kullanılmaz |
 | `JpgToPdfConverter` | `.jpg` → `.pdf` | PyMuPDF (`fitz`) | ❌ Hayır (tek motor) | `accepted_extensions` override: `.jpg` **ve** `.jpeg` kabul eder (kaynak halen `.jpg`) |
 
 ## Motor Tespit Sırası

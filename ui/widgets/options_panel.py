@@ -327,6 +327,35 @@ class OptionsPanelWidget(QWidget):
             self._conv_type_combo.addItem(converter.display_name, userData=converter)
         self._conv_type_combo.blockSignals(False)
 
+    def select_converter(self, converter: IConverter) -> bool:
+        """
+        Verilen converter'ı dropdown'da seçili yapar (kayıtlı ayarları geri
+        yüklerken kullanılır). Combo'da bulunamazsa `False` döner, seçim
+        değişmez.
+        """
+        idx = self._conv_type_combo.findData(converter)
+        if idx < 0:
+            return False
+        self._conv_type_combo.setCurrentIndex(idx)
+        return True
+
+    def set_output_dir(self, path: Optional[Path]) -> None:
+        """Kayıtlı çıktı klasörünü sinyal fırlatmadan geri yükler."""
+        self._output_dir = path
+        self._out_edit.setText(str(path) if path else "")
+
+    def set_quality_options(self, dpi: int, quality: int, overwrite: bool) -> None:
+        """Kayıtlı DPI/kalite/üzerine-yaz ayarlarını sinyal fırlatmadan geri yükler."""
+        self._dpi_spin.blockSignals(True)
+        self._quality_spin.blockSignals(True)
+        self._overwrite_check.blockSignals(True)
+        self._dpi_spin.setValue(dpi)
+        self._quality_spin.setValue(quality)
+        self._overwrite_check.setChecked(overwrite)
+        self._dpi_spin.blockSignals(False)
+        self._quality_spin.blockSignals(False)
+        self._overwrite_check.blockSignals(False)
+
     def set_engine_status(self, engine_name: str, is_available: bool) -> None:
         """
         PDF converter'lar için engine combo içeriğini değiştirir ve devre dışı bırakır.
