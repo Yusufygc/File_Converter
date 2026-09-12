@@ -1,4 +1,7 @@
+from PySide6.QtCore import QSettings
+
 from core.utils.resource_helper import get_resource_path
+from ui.app_settings import ORG_NAME, APP_NAME, THEME_MODE_KEY
 
 # CSS dostu yollar için ters bölüleri düze çevir
 def _css_path(rel_path: str) -> str:
@@ -8,7 +11,7 @@ def _css_path(rel_path: str) -> str:
 CHEVRON_DOWN = _css_path("assets/icons/chevron_down.svg")
 CHEVRON_UP = _css_path("assets/icons/chevron_up.svg")
 
-PALETTE = {
+DARK_PALETTE = {
     "bg_primary":    "#0D0F18",
     "bg_surface":    "#13161F",
     "bg_card":       "#1C2030",
@@ -31,63 +34,89 @@ PALETTE = {
     "border_light":  "#303759",
 }
 
-MAIN_STYLE = f"""
+LIGHT_PALETTE = {
+    "bg_primary":    "#F5F6FA",
+    "bg_surface":    "#FFFFFF",
+    "bg_card":       "#FFFFFF",
+    "bg_elevated":   "#EEF0F6",
+    "bg_input":      "#FFFFFF",
+    "bg_hover":      "#E7EAF3",
+    "accent":        "#3B6FD6",
+    "accent_hover":  "#2C5BC0",
+    "accent_dim":    "#DCE6FB",
+    "accent_glow":   "rgba(59,111,214,0.12)",
+    "success":       "#1E9E5A",
+    "success_dim":   "rgba(30,158,90,0.12)",
+    "warning":       "#B9720A",
+    "error":         "#D33F3F",
+    "error_dim":     "rgba(211,63,63,0.10)",
+    "text_primary":  "#1A1D2A",
+    "text_secondary":"#4A5068",
+    "text_muted":    "#7C8298",
+    "border":        "#DDE1EC",
+    "border_light":  "#C7CCDC",
+}
+
+
+def build_style(palette: dict) -> str:
+    """Verilen palete göre tam QSS string'ini üretir."""
+    return f"""
 /* ── Global Reset ───────────────────────────────────── */
 * {{
     outline: none;
 }}
 QWidget {{
-    background-color: {PALETTE['bg_primary']};
-    color: {PALETTE['text_primary']};
+    background-color: {palette['bg_primary']};
+    color: {palette['text_primary']};
     font-family: 'Segoe UI', 'SF Pro Text', 'Helvetica Neue', sans-serif;
     font-size: 13px;
-    selection-background-color: {PALETTE['accent_dim']};
-    selection-color: {PALETTE['accent']};
+    selection-background-color: {palette['accent_dim']};
+    selection-color: {palette['accent']};
 }}
 QMainWindow {{
-    background-color: {PALETTE['bg_primary']};
+    background-color: {palette['bg_primary']};
 }}
 
 /* ── Header ─────────────────────────────────────────── */
 #titleBar {{
-    background-color: {PALETTE['bg_surface']};
-    border-bottom: 1px solid {PALETTE['border']};
+    background-color: {palette['bg_surface']};
+    border-bottom: 1px solid {palette['border']};
 }}
 #appTitle {{
     font-size: 16px;
     font-weight: 700;
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
     letter-spacing: -0.3px;
 }}
 #formatBadge {{
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
-    color: {PALETTE['accent']};
-    background-color: {PALETTE['accent_dim']};
+    color: {palette['accent']};
+    background-color: {palette['accent_dim']};
     border-radius: 4px;
     padding: 3px 8px;
 }}
 
 /* ── Drop Zone ──────────────────────────────────────── */
 #dropZone {{
-    background-color: {PALETTE['bg_surface']};
-    border: 1.5px dashed {PALETTE['border_light']};
+    background-color: {palette['bg_surface']};
+    border: 1.5px dashed {palette['border_light']};
     border-radius: 10px;
 }}
 #dropZone:hover {{
-    border-color: {PALETTE['accent']};
-    background-color: {PALETTE['accent_glow']};
+    border-color: {palette['accent']};
+    background-color: {palette['accent_glow']};
 }}
 #dropZoneActive {{
-    border: 1.5px dashed {PALETTE['accent']};
-    background-color: {PALETTE['accent_glow']};
+    border: 1.5px dashed {palette['accent']};
+    background-color: {palette['accent_glow']};
 }}
 
 /* ── File List ──────────────────────────────────────── */
 QListWidget {{
-    background-color: {PALETTE['bg_surface']};
-    border: 1px solid {PALETTE['border']};
+    background-color: {palette['bg_surface']};
+    border: 1px solid {palette['border']};
     border-radius: 8px;
     padding: 4px;
     outline: none;
@@ -95,46 +124,46 @@ QListWidget {{
 QListWidget::item {{
     padding: 0px; /* Custom widget kullanıldığı için padding 0 olmalı, aksi halde offset oluşur */
     border-radius: 5px;
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
     border: none;
 }}
 QListWidget::item:selected {{
-    background-color: {PALETTE['accent_dim']};
-    color: {PALETTE['accent_hover']};
+    background-color: {palette['accent_dim']};
+    color: {palette['accent_hover']};
 }}
 QListWidget::item:hover:!selected {{
-    background-color: {PALETTE['bg_hover']};
+    background-color: {palette['bg_hover']};
 }}
 
 /* ── Buttons (secondary) ────────────────────────────── */
 QPushButton {{
-    background-color: {PALETTE['bg_elevated']};
-    color: {PALETTE['text_primary']};
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_elevated']};
+    color: {palette['text_primary']};
+    border: 1px solid {palette['border_light']};
     border-radius: 7px;
     padding: 7px 16px;
     font-weight: 500;
     font-size: 13px;
 }}
 QPushButton:hover {{
-    background-color: {PALETTE['bg_hover']};
-    border-color: {PALETTE['text_muted']};
+    background-color: {palette['bg_hover']};
+    border-color: {palette['text_muted']};
     color: #ffffff;
 }}
 QPushButton:pressed {{
-    background-color: {PALETTE['bg_card']};
-    border-color: {PALETTE['border']};
+    background-color: {palette['bg_card']};
+    border-color: {palette['border']};
 }}
 QPushButton:disabled {{
-    color: {PALETTE['text_muted']};
-    border-color: {PALETTE['border']};
-    background-color: {PALETTE['bg_card']};
+    color: {palette['text_muted']};
+    border-color: {palette['border']};
+    background-color: {palette['bg_card']};
 }}
 
 /* ── Primary CTA ─────────────────────────────────────── */
 QPushButton#primaryBtn {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {PALETTE['accent']}, stop:1 {PALETTE['accent_hover']});
+        stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});
     color: #ffffff;
     border: none;
     border-radius: 9px;
@@ -145,51 +174,51 @@ QPushButton#primaryBtn {{
 }}
 QPushButton#primaryBtn:hover {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {PALETTE['accent_hover']}, stop:1 #7BB8FF);
+        stop:0 {palette['accent_hover']}, stop:1 #7BB8FF);
 }}
 QPushButton#primaryBtn:pressed {{
-    background: {PALETTE['accent']};
+    background: {palette['accent']};
 }}
 QPushButton#primaryBtn:disabled {{
-    background: {PALETTE['bg_elevated']};
-    color: {PALETTE['text_muted']};
-    border: 1px solid {PALETTE['border']};
+    background: {palette['bg_elevated']};
+    color: {palette['text_muted']};
+    border: 1px solid {palette['border']};
 }}
 
 /* ── Add File Button ─────────────────────────────────── */
 QPushButton#addBtn {{
-    background-color: {PALETTE['accent_dim']};
-    color: {PALETTE['accent_hover']};
-    border: 1px solid {PALETTE['accent_dim']};
+    background-color: {palette['accent_dim']};
+    color: {palette['accent_hover']};
+    border: 1px solid {palette['accent_dim']};
     border-radius: 7px;
     font-weight: 600;
 }}
 QPushButton#addBtn:hover {{
-    background-color: {PALETTE['accent']};
+    background-color: {palette['accent']};
     color: #ffffff;
-    border-color: {PALETTE['accent']};
+    border-color: {palette['accent']};
 }}
 
 /* ── Danger Button ──────────────────────────────────── */
 QPushButton#dangerBtn {{
     background-color: transparent;
-    color: {PALETTE['error']};
+    color: {palette['error']};
     border: 1px solid rgba(240,82,82,0.35);
     border-radius: 7px;
 }}
 QPushButton#dangerBtn:hover {{
-    background-color: {PALETTE['error_dim']};
-    border-color: {PALETTE['error']};
+    background-color: {palette['error_dim']};
+    border-color: {palette['error']};
 }}
 QPushButton#dangerBtn:disabled {{
-    color: {PALETTE['text_muted']};
-    border-color: {PALETTE['border']};
+    color: {palette['text_muted']};
+    border-color: {palette['border']};
     background-color: transparent;
 }}
 
 /* ── Progress Bar ───────────────────────────────────── */
 QProgressBar {{
-    background-color: {PALETTE['bg_elevated']};
+    background-color: {palette['bg_elevated']};
     border: none;
     border-radius: 4px;
     height: 6px;
@@ -198,23 +227,23 @@ QProgressBar {{
 }}
 QProgressBar::chunk {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {PALETTE['accent']}, stop:1 {PALETTE['accent_hover']});
+        stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});
     border-radius: 4px;
 }}
 
 /* ── ComboBox ───────────────────────────────────────── */
 QComboBox {{
-    background-color: {PALETTE['bg_input']};
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_input']};
+    border: 1px solid {palette['border_light']};
     border-radius: 7px;
     padding: 6px 32px 6px 10px;
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
     font-size: 13px;
     min-width: 180px;
 }}
 QComboBox:hover, QComboBox:focus {{
-    border-color: {PALETTE['accent']};
-    background-color: {PALETTE['bg_elevated']};
+    border-color: {palette['accent']};
+    background-color: {palette['bg_elevated']};
 }}
 QComboBox::drop-down {{
     subcontrol-origin: padding;
@@ -229,13 +258,13 @@ QComboBox::down-arrow {{
     height: 12px;
 }}
 QComboBox QAbstractItemView {{
-    background-color: {PALETTE['bg_surface']}; /* Daha koyu ve opak arka plan */
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_surface']}; /* Daha koyu ve opak arka plan */
+    border: 1px solid {palette['border_light']};
     border-radius: 7px;
     padding: 4px;
-    selection-background-color: {PALETTE['accent_dim']};
-    selection-color: {PALETTE['accent_hover']};
-    color: {PALETTE['text_primary']};
+    selection-background-color: {palette['accent_dim']};
+    selection-color: {palette['accent_hover']};
+    color: {palette['text_primary']};
     outline: none;
     font-size: 13px; /* Font uyarısını önlemek için kesin boyut */
 }}
@@ -247,15 +276,15 @@ QComboBox QAbstractItemView::item {{
 
 /* ── SpinBox ────────────────────────────────────────── */
 QSpinBox {{
-    background-color: {PALETTE['bg_input']};
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_input']};
+    border: 1px solid {palette['border_light']};
     border-radius: 7px;
     padding: 6px 10px;
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
     font-size: 13px;
 }}
 QSpinBox:hover, QSpinBox:focus {{
-    border-color: {PALETTE['accent']};
+    border-color: {palette['accent']};
 }}
 QSpinBox::up-button, QSpinBox::down-button {{
     background-color: transparent;
@@ -275,61 +304,61 @@ QSpinBox::down-arrow {{
 
 /* ── LineEdit ───────────────────────────────────────── */
 QLineEdit {{
-    background-color: {PALETTE['bg_input']};
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_input']};
+    border: 1px solid {palette['border_light']};
     border-radius: 7px;
     padding: 7px 10px;
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
     font-size: 13px;
 }}
 QLineEdit:hover {{
-    border-color: {PALETTE['border_light']};
+    border-color: {palette['border_light']};
 }}
 QLineEdit:focus {{
-    border-color: {PALETTE['accent']};
+    border-color: {palette['accent']};
 }}
 QLineEdit:read-only {{
-    color: {PALETTE['text_secondary']};
-    background-color: {PALETTE['bg_card']};
+    color: {palette['text_secondary']};
+    background-color: {palette['bg_card']};
 }}
 QLineEdit::placeholder {{
-    color: {PALETTE['text_muted']};
+    color: {palette['text_muted']};
 }}
 
 /* ── CheckBox ───────────────────────────────────────── */
 QCheckBox {{
     spacing: 9px;
-    color: {PALETTE['text_secondary']};
+    color: {palette['text_secondary']};
     font-size: 13px;
 }}
 QCheckBox:hover {{
-    color: {PALETTE['text_primary']};
+    color: {palette['text_primary']};
 }}
 QCheckBox::indicator {{
     width: 17px;
     height: 17px;
     border-radius: 4px;
-    border: 1.5px solid {PALETTE['border_light']};
-    background-color: {PALETTE['bg_input']};
+    border: 1.5px solid {palette['border_light']};
+    background-color: {palette['bg_input']};
 }}
 QCheckBox::indicator:hover {{
-    border-color: {PALETTE['accent']};
+    border-color: {palette['accent']};
 }}
 QCheckBox::indicator:checked {{
-    background-color: {PALETTE['accent']};
-    border-color: {PALETTE['accent']};
+    background-color: {palette['accent']};
+    border-color: {palette['accent']};
 }}
 
 /* ── GroupBox ───────────────────────────────────────── */
 QGroupBox {{
-    background-color: {PALETTE['bg_card']};
-    border: 1px solid {PALETTE['border']};
+    background-color: {palette['bg_card']};
+    border: 1px solid {palette['border']};
     border-radius: 10px;
     margin-top: 18px;
     padding: 14px 14px 12px 14px;
     font-size: 10px;
     font-weight: 700;
-    color: {PALETTE['text_muted']};
+    color: {palette['text_muted']};
     letter-spacing: 1.2px;
     text-transform: uppercase;
 }}
@@ -339,8 +368,8 @@ QGroupBox::title {{
     left: 14px;
     top: -1px;
     padding: 0 6px;
-    background-color: {PALETTE['bg_card']};
-    color: {PALETTE['text_muted']};
+    background-color: {palette['bg_card']};
+    color: {palette['text_muted']};
     border-radius: 3px;
 }}
 
@@ -351,12 +380,12 @@ QScrollBar:vertical {{
     margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background-color: {PALETTE['border_light']};
+    background-color: {palette['border_light']};
     border-radius: 3px;
     min-height: 24px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background-color: {PALETTE['text_muted']};
+    background-color: {palette['text_muted']};
 }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
     height: 0;
@@ -367,8 +396,8 @@ QScrollBar:horizontal {{
 
 /* ── Section Cards (options panel) ─────────────────── */
 QWidget#sectionCard {{
-    background: {PALETTE['bg_card']};
-    border: 1px solid {PALETTE['border']};
+    background: {palette['bg_card']};
+    border: 1px solid {palette['border']};
     border-radius: 8px;
 }}
 QWidget#sectionCard QLabel {{
@@ -380,9 +409,9 @@ QWidget#sectionCard QWidget {{
 
 /* ── Tooltip ────────────────────────────────────────── */
 QToolTip {{
-    background-color: {PALETTE['bg_elevated']};
-    color: {PALETTE['text_primary']};
-    border: 1px solid {PALETTE['border_light']};
+    background-color: {palette['bg_elevated']};
+    color: {palette['text_primary']};
+    border: 1px solid {palette['border_light']};
     border-radius: 6px;
     padding: 7px 11px;
     font-size: 12px;
@@ -390,16 +419,39 @@ QToolTip {{
 
 /* ── Status Bar Labels ──────────────────────────────── */
 #statusLabel {{
-    color: {PALETTE['text_secondary']};
+    color: {palette['text_secondary']};
     font-size: 12px;
 }}
 #sectionLabel {{
-    color: {PALETTE['text_secondary']};
+    color: {palette['text_secondary']};
     font-size: 12px;
     font-weight: 600;
 }}
 #fileCount {{
-    color: {PALETTE['text_muted']};
+    color: {palette['text_muted']};
     font-size: 12px;
 }}
 """
+
+
+def _load_theme_mode() -> str:
+    """
+    Tema tercihini `QSettings`'ten okur. Açıkça org/app adı verilen
+    `QSettings` her zaman kullanılabilir — `QApplication` kurulmuş
+    olmasına gerek yoktur, bu yüzden bu modül import edilir edilmez
+    (ui.main_window'dan çok önce) güvenle çağrılabilir.
+    """
+    settings = QSettings(ORG_NAME, APP_NAME)
+    mode = settings.value(THEME_MODE_KEY, "dark")
+    return str(mode).lower() if mode else "dark"
+
+
+# Modül import edilir edilmez doğru palet seçilir — bu sayede import
+# zincirindeki her dosyadaki `from ui.styles.theme import PALETTE`
+# (options_panel.py, file_list.py, drop_zone.py, summary_dialog.py,
+# main_window.py) Python'un tek-seferlik modül önbelleği sayesinde
+# aynı, doğru paleti alır. Canlı (restart'sız) tema değişimi bu
+# mekanizmayla desteklenmez — bkz. docs/wiki/ui-katmani.md.
+_MODE = _load_theme_mode()
+PALETTE = LIGHT_PALETTE if _MODE == "light" else DARK_PALETTE
+MAIN_STYLE = build_style(PALETTE)

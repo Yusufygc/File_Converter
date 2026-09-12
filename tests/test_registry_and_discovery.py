@@ -25,10 +25,12 @@ def test_discovery_finds_all_shipped_converters():
 
     assert names == {
         "PptxToPdfConverter",
+        "DocxToPdfConverter",
         "PdfToDocxConverter",
         "PdfToOdtConverter",
         "PdfToJpgConverter",
         "PdfToPngConverter",
+        "PdfCompressConverter",
         "JpgToPdfConverter",
     }
 

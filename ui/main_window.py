@@ -168,11 +168,39 @@ class MainWindow(QMainWindow):
         )
         badge = self._format_badge
 
+        self._theme_btn = QPushButton(self._theme_button_icon())
+        self._theme_btn.setObjectName("themeBtn")
+        self._theme_btn.setFixedSize(32, 32)
+        self._theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._theme_btn.setToolTip("Tema değiştir (yeniden başlatma gerekir)")
+        self._theme_btn.clicked.connect(self._on_theme_toggle_clicked)
+
         layout.addWidget(logo)
         layout.addWidget(title)
         layout.addWidget(badge)
         layout.addStretch()
+        layout.addWidget(self._theme_btn)
         return header
+
+    def _theme_button_icon(self) -> str:
+        return "☀️" if self._settings.load_theme_mode() == "light" else "🌙"
+
+    def _on_theme_toggle_clicked(self) -> None:
+        """
+        Tema tercihini kaydeder ve bir sonraki başlatmada uygulanacağını
+        bildirir. `PALETTE` her dosyada import zamanında sabitlendiği
+        için (bkz. ui/styles/theme.py) canlı/restart'sız geçiş
+        desteklenmiyor — bilinçli bir sınır, bkz. docs/wiki/ui-katmani.md.
+        """
+        current = self._settings.load_theme_mode()
+        new_mode = "light" if current == "dark" else "dark"
+        self._settings.save_theme_mode(new_mode)
+        self._theme_btn.setText(self._theme_button_icon())
+        QMessageBox.information(
+            self,
+            "Tema Değiştirildi",
+            "Yeni tema, uygulama yeniden başlatıldığında uygulanacak.",
+        )
 
     def _build_body(self) -> QWidget:
         body = QWidget()

@@ -3,7 +3,7 @@
 ## Testler (`tests/`)
 
 `core/` katmanı Qt'siz olduğu için testler PySide6 başlatmadan,
-milisaniyeler içinde çalışır (18 test ~1s) — bkz. [[mimari]].
+milisaniyeler içinde çalışır (31 test ~1s) — bkz. [[mimari]].
 
 ```bash
 python -m pytest tests/ -v
@@ -25,6 +25,16 @@ python -m pytest tests/ -v
 - `tests/test_pdf_to_png_converter.py` — gerçek `PdfToPngConverter`'ı
   gerçek PyMuPDF ile uçtan uca test eder (diğerlerinin aksine
   `FakeConverter` kullanmaz) — tek/çok sayfalı PDF, geçersiz dosya reddi.
+- `tests/test_pdf_compress_converter.py` — gerçek `PdfCompressConverter`;
+  çıktı dosya adının kaynaktan **farklı** olduğunu (üzerine yazma
+  koruması) ve sayfa sayısının korunduğunu doğrular.
+- `tests/test_docx_to_pdf_converter.py` — `DocxToPdfConverter`'ın
+  LibreOffice binary'sine ihtiyaç duymayan kısımları (`validate`,
+  `is_available`, `unavailable_hint`) — gerçek dönüşüm testi yok
+  (`PdfToDocxConverter`/`PdfToOdtConverter` için de yok, CI'da
+  LibreOffice garantili değil).
+- `tests/test_file_discovery.py` — `ui/file_discovery.collect_files()`'ı
+  (Qt'siz, saf pathlib mantığı) iç içe klasör yapısıyla test eder.
 
 `conftest.py` (proje kökü), `pytest`'in çağırılma biçiminden bağımsız
 olarak proje kökünü `sys.path`'e ekler.

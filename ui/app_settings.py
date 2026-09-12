@@ -17,6 +17,15 @@ from typing import Optional, Tuple
 
 from PySide6.QtCore import QByteArray, QSettings
 
+# Org/app adı için tek kaynak — main.py (QApplication kurulumu) ve
+# theme.py (tema tercihini QApplication'dan bağımsız, import zamanında
+# okumak için) burayı kullanır. İki yerde ayrı ayrı hardcoded olmasını
+# önler.
+ORG_NAME = "YusufDev"
+APP_NAME = "FileConvert Pro"
+
+THEME_MODE_KEY = "theme/mode"
+
 
 class AppSettings:
     """`QSettings`'i sarmalayan, uygulamaya özel anahtarlarla çalışan ince katman."""
@@ -76,3 +85,13 @@ class AppSettings:
         else:
             overwrite = str(overwrite_raw).strip().lower() == "true"
         return dpi, quality, overwrite
+
+    # ------------------------------------------------------------------ #
+    #  Tema                                                                #
+    # ------------------------------------------------------------------ #
+
+    def save_theme_mode(self, mode: str) -> None:
+        self._qs.setValue(THEME_MODE_KEY, mode)
+
+    def load_theme_mode(self) -> str:
+        return str(self._qs.value(THEME_MODE_KEY, "dark")).lower()

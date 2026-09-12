@@ -22,10 +22,12 @@ from core.interfaces.converter_interface import IConverter, IConverterRegistry
 
 _PREFERRED_ORDER: List[Tuple[str, str]] = [
     (".pptx", ".pdf"),
+    (".docx", ".pdf"),
     (".pdf", ".docx"),
     (".pdf", ".odt"),
     (".pdf", ".jpg"),
     (".pdf", ".png"),
+    (".pdf", ".pdf"),
     (".jpg", ".pdf"),
 ]
 

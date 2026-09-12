@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ui.styles.theme import PALETTE
 from core.utils.resource_helper import get_resource_path
+from ui.file_discovery import collect_files
 
 
 class DropZoneWidget(QWidget):
@@ -50,7 +51,7 @@ class DropZoneWidget(QWidget):
         icon_label.setStyleSheet("background: transparent; border: none;")
 
         # Primary text
-        self._primary_label = QLabel("Dosyaları buraya sürükleyin veya tıklayın")
+        self._primary_label = QLabel("Dosyaları veya bir klasörü buraya sürükleyin ya da tıklayın")
         self._primary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._primary_label.setStyleSheet(
             f"font-size: 13px; font-weight: 600; color: {PALETTE['text_primary']}; background: transparent; border: none;"
@@ -75,7 +76,7 @@ class DropZoneWidget(QWidget):
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         if event.mimeData().hasUrls():
             paths = [Path(u.toLocalFile()) for u in event.mimeData().urls()]
-            if any(p.suffix.lower() in self._accepted for p in paths):
+            if any(p.is_dir() or p.suffix.lower() in self._accepted for p in paths):
                 event.acceptProposedAction()
                 self.setObjectName("dropZoneActive")
                 self._refresh_style()
@@ -90,11 +91,14 @@ class DropZoneWidget(QWidget):
         self.setObjectName("dropZone")
         self._refresh_style()
 
-        paths = [
-            Path(u.toLocalFile())
-            for u in event.mimeData().urls()
-            if Path(u.toLocalFile()).suffix.lower() in self._accepted
-        ]
+        paths: List[Path] = []
+        for u in event.mimeData().urls():
+            p = Path(u.toLocalFile())
+            if p.is_dir():
+                paths.extend(collect_files(p, self._accepted))
+            elif p.suffix.lower() in self._accepted:
+                paths.append(p)
+
         if paths:
             self.files_dropped.emit(paths)
         event.acceptProposedAction()

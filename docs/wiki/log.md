@@ -4,6 +4,18 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-12] [INGEST] | Kademe 2 güvenli 4 madde tamamlandı
+
+Yol haritasındaki (bkz. [[yol-haritasi]]) 7 Kademe 2 maddesinden N:1
+mimari genişlemesi gerektiren (8, 10) ve LibreOffice eşzamanlılık
+riski taşıyan (11) kullanıcı kararıyla ertelendi; güvenli 4 madde
+uygulandı: `DocxToPdfConverter`, `PdfCompressConverter` (üzerine yazma
+korumalı `get_output_path()` override'ı ile), `ui/file_discovery.py`
+(klasör sürükle-bırak, alt klasörler dahil), açık/koyu tema
+(`LIGHT_PALETTE` + `AppSettings` tema tercihi, yeniden başlatınca
+uygulanır — canlı geçiş değil). Test sayısı 18'den 31'e çıktı. Detay:
+[[donusturucu-envanteri]], [[ui-katmani]], [[test-ve-bagimliliklar]].
+
 ## [2026-09-12] [INGEST] | Kademe 1 tamamlandı
 
 Yol haritasındaki (bkz. [[yol-haritasi]]) 6 hızlı-kazanım maddesi

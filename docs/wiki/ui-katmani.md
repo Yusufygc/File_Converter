@@ -25,6 +25,9 @@ Composition root / controller. Sorumlulukları:
 - Ayarları kalıcı saklama (`self._settings: AppSettings`) —
   `_restore_settings()` (`__init__` sonrası, combo doldurulduktan sonra)
   ve `closeEvent()` (kapanışta kaydeder).
+- Tema butonu (`_theme_btn`, header'da `🌙`/`☀️`) — `_on_theme_toggle_clicked()`
+  tercihi `AppSettings.save_theme_mode()` ile kaydeder, "yeniden
+  başlatınca uygulanır" mesajı gösterir (canlı geçiş yok, bkz. `ui/styles/theme.py`).
 
 ## `ui/converter_catalog.py`
 
@@ -44,8 +47,11 @@ içindeydi — backend/frontend ayrımını netleştirmek için buraya taşınd�
 
 `AppSettings` — `QSettings`'i sarmalar (pencere geometrisi, aktif
 converter kimliği `(source_ext, target_ext)`, çıktı klasörü, DPI/kalite/
-üzerine-yaz). Tamamen UI-katmanına özel; `core/`'a sızmaz. `main.py`'de
-zaten ayarlanan org/app adını kullanır. `OptionsPanelWidget`'ın
+üzerine-yaz, tema tercihi). Tamamen UI-katmanına özel; `core/`'a sızmaz.
+`ORG_NAME`/`APP_NAME`/`THEME_MODE_KEY` modül sabitlerini de burada
+tanımlar — `main.py` (QApplication kurulumu) ve `ui/styles/theme.py`
+(tema tercihini `QApplication`'dan bağımsız okumak için) buradan alır,
+iki yerde ayrı hardcoded string yok. `OptionsPanelWidget`'ın
 `select_converter()`/`set_output_dir()`/`set_quality_options()` genel
 API'leriyle konuşur — `MainWindow` widget'ın private state'ine
 dokunmaz.
@@ -58,10 +64,22 @@ uzantısına göre (`.pptx`, `.pdf`, `.jpg`/`.jpeg`) doğru ikon seçiliyor,
 bilinmeyen bir uzantı `file_generic.svg`'ye düşüyor (crash etmez, yeni
 converter eklerken özel ikon eklemek zorunlu değil).
 
+## `ui/file_discovery.py`
+
+`collect_files(directory, accepted_extensions) -> List[Path]` — saf
+`pathlib`/`rglob` mantığı, **Qt'den bağımsız** (`ui/icon_map.py`'nin de
+izlediği "UI-katmanında yaşayan ama Qt'siz saf mantık" deseni — bu
+yüzden `tests/`'teki hızlı, Qt'siz test paketine katılabiliyor).
+`DropZoneWidget.dropEvent()` bir klasör sürüklendiğinde bunu çağırır
+(alt klasörler dahil tarar); `dragEnterEvent()` de bir klasörü kabul
+edecek şekilde güncellendi.
+
 ## Widget'lar (`ui/widgets/`)
 
 - `DropZoneWidget` — sürükle-bırak + tıkla-seç; `accepted_extensions`
-  listesini `set_accepted_extensions()` ile dinamik günceller.
+  listesini `set_accepted_extensions()` ile dinamik günceller. Bir
+  klasör sürüklendiğinde `ui/file_discovery.collect_files()` ile
+  içindeki (alt klasörler dahil) uygun dosyaları toplar.
 - `FileListWidget` / `FileItemWidget` — dosya listesi, durum ikonları
   (`ui/icon_map.py` ile dosya türüne göre).
 - `OptionsPanelWidget` — dönüşüm türü/motor/çıktı klasörü/DPI/kalite
@@ -76,8 +94,16 @@ Toplu dönüşüm bitince özet gösterir. `page_count > 1` olan sonuçlarda
 
 ## `ui/styles/theme.py`
 
-`PALETTE` dict + `MAIN_STYLE` (tek parça QSS string). Koyu tema, merkezi
-renk sabitleri.
+`DARK_PALETTE`/`LIGHT_PALETTE` dict'leri + `build_style(palette) -> str`
+(parametrize edilmiş QSS üretimi). Modül **import edilir edilmez**
+(`QSettings(ORG_NAME, APP_NAME)` ile, `QApplication` gerektirmeden)
+kayıtlı tema tercihine göre `PALETTE`/`MAIN_STYLE` seçilir. Diğer tüm
+dosyalardaki `from ui.styles.theme import PALETTE` importları bu
+tek-seferlik çözümlemeyi olduğu gibi alır — Python'un modül önbelleği
+sayesinde tutarlılık garanti edilir. **Canlı (restart'sız) tema geçişi
+desteklenmez**: birçok widget dosyası `PALETTE[...]`'i inşa anında
+inline `setStyleSheet()` içine gömüyor; bunu QSS'e taşımak ayrı bir
+refactor gerektirir, bilinçli olarak kapsam dışı bırakıldı.
 
 ## İlgili Sayfalar
 

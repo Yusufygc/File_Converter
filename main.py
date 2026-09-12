@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from ui.main_window import MainWindow
 from ui.styles.theme import MAIN_STYLE
+from ui.app_settings import ORG_NAME, APP_NAME
 
 
 def _handle_exception(exc_type, exc_value, exc_tb):
@@ -27,8 +28,8 @@ def _handle_exception(exc_type, exc_value, exc_tb):
 
 def main() -> int:
     app = QApplication(sys.argv)
-    app.setApplicationName("FileConvert Pro")
-    app.setOrganizationName("YusufDev")
+    app.setApplicationName(APP_NAME)
+    app.setOrganizationName(ORG_NAME)
     app.setStyleSheet(MAIN_STYLE)
 
     sys.excepthook = _handle_exception
