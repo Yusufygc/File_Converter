@@ -73,6 +73,8 @@ class SummaryDialog(QDialog):
             text = f"{icon}  {res.file_name}"
             if res.success and res.output_path:
                 text += f"  →  {res.output_path.name}  ({res.elapsed_seconds:.1f}s)"
+                if res.page_count > 1:
+                    text += f"  —  {res.page_count} sayfa"
             else:
                 text += f"  —  {res.error_message[:80]}"
 

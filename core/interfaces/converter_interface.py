@@ -19,6 +19,7 @@ class ConversionOptions:
     dpi: int = 150
     quality: int = 90
     overwrite_existing: bool = True
+    page_range: Optional[str] = None
 
     def __post_init__(self):
         if self.dpi < 72 or self.dpi > 600:
@@ -85,6 +86,38 @@ class IConverter(ABC):
     @abstractmethod
     def display_name(self) -> str:
         """Kullanıcıya gösterilecek dönüşüm adı (örn: 'PPTX → PDF')"""
+
+    @property
+    def accepted_extensions(self) -> List[str]:
+        """
+        Kabul edilen kaynak dosya uzantıları.
+        Varsayılan: yalnızca `source_extension`. Birden çok uzantı kabul
+        eden converter'lar (örn. .jpg + .jpeg) bunu override eder.
+        UI (drop zone, dosya diyaloğu) bunu okuyarak filtre kurar.
+        """
+        return [self.source_extension]
+
+    @property
+    @abstractmethod
+    def is_available(self) -> bool:
+        """Bu dönüşüm için gerekli motor/araç sistemde kurulu/erişilebilir mi."""
+
+    @property
+    @abstractmethod
+    def active_engine_name(self) -> str:
+        """UI'da gösterilecek aktif motor adı (örn. 'LibreOffice', 'PyMuPDF')."""
+
+    @property
+    def is_parallel_safe(self) -> bool:
+        """
+        Bu converter'ın aynı anda birden fazla dosya için (thread pool ile)
+        çalıştırılması güvenli mi. Varsayılan `False` (temkinli) — yalnızca
+        dış süreç/paylaşımlı durum kullanmayan converter'lar (örn. PyMuPDF
+        tabanlı olanlar) `True` döner. LibreOffice/MS Office gibi harici
+        süreçler paralel çalıştırıldığında profil/soket çakışması riski
+        taşıdığı için varsayılan olarak sıralı kalır (bkz. docs/wiki/libreoffice-motoru.md).
+        """
+        return False
 
     @abstractmethod
     def validate(self, source_path: Path) -> bool:

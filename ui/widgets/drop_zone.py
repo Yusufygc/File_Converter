@@ -7,9 +7,12 @@ Dosya sürükle-bırak alanı. SRP: sadece dosya alımından sorumlu.
 from pathlib import Path
 from typing import List
 
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+
+from core.utils.resource_helper import get_resource_path
+from ui.file_discovery import collect_files
 
 
 class DropZoneWidget(QWidget):
@@ -40,28 +43,26 @@ class DropZoneWidget(QWidget):
         layout.setSpacing(6)
 
         # Icon
-        icon_label = QLabel("📂")
+        icon_label = QLabel()
+        icon_pixmap = QIcon(get_resource_path("assets/icons/app_icon.svg")).pixmap(48, 48)
+        icon_label.setPixmap(icon_pixmap)
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet("font-size: 28px; background: transparent; border: none;")
+        icon_label.setStyleSheet("background: transparent; border: none;")
 
         # Primary text
-        self._primary_label = QLabel("Dosyaları buraya sürükleyin veya tıklayın")
+        self._primary_label = QLabel("Dosyaları veya bir klasörü buraya sürükleyin ya da tıklayın")
         self._primary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._primary_label.setStyleSheet(
-            f"font-size: 13px; font-weight: 600; color: #ECEEF5; background: transparent; border: none;"
-        )
+        self._primary_label.setObjectName("dropZonePrimaryLabel")
 
         # Secondary text
-        ext_list = "  ·  ".join(e.upper() for e in self._accepted)
-        secondary = QLabel(ext_list)
-        secondary.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        secondary.setStyleSheet(
-            f"font-size: 11px; color: #525A78; background: transparent; border: none; letter-spacing: 0.5px;"
-        )
+        ext_list = "  ·  ".join(e.upper() for e in sorted(self._accepted))
+        self._ext_label = QLabel(ext_list)
+        self._ext_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ext_label.setObjectName("dropZoneExtLabel")
 
         layout.addWidget(icon_label)
         layout.addWidget(self._primary_label)
-        layout.addWidget(secondary)
+        layout.addWidget(self._ext_label)
 
     # ------------------------------------------------------------------ #
     #  Drag & Drop Events                                                  #
@@ -70,7 +71,7 @@ class DropZoneWidget(QWidget):
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         if event.mimeData().hasUrls():
             paths = [Path(u.toLocalFile()) for u in event.mimeData().urls()]
-            if any(p.suffix.lower() in self._accepted for p in paths):
+            if any(p.is_dir() or p.suffix.lower() in self._accepted for p in paths):
                 event.acceptProposedAction()
                 self.setObjectName("dropZoneActive")
                 self._refresh_style()
@@ -85,11 +86,14 @@ class DropZoneWidget(QWidget):
         self.setObjectName("dropZone")
         self._refresh_style()
 
-        paths = [
-            Path(u.toLocalFile())
-            for u in event.mimeData().urls()
-            if Path(u.toLocalFile()).suffix.lower() in self._accepted
-        ]
+        paths: List[Path] = []
+        for u in event.mimeData().urls():
+            p = Path(u.toLocalFile())
+            if p.is_dir():
+                paths.extend(collect_files(p, self._accepted))
+            elif p.suffix.lower() in self._accepted:
+                paths.append(p)
+
         if paths:
             self.files_dropped.emit(paths)
         event.acceptProposedAction()
@@ -98,6 +102,12 @@ class DropZoneWidget(QWidget):
         # Tıklama ile de dosya seçilebilsin (parent MainWindow handle eder)
         self.files_dropped.emit([])  # boş liste → dosya diyaloğu aç
         super().mousePressEvent(event)
+
+    def set_accepted_extensions(self, extensions: List[str]) -> None:
+        """Kabul edilen dosya uzantılarını günceller ve etiketi yeniler."""
+        self._accepted = {ext.lower() for ext in extensions}
+        ext_list = "  ·  ".join(e.upper() for e in sorted(self._accepted))
+        self._ext_label.setText(ext_list)
 
     def _refresh_style(self) -> None:
         self.style().unpolish(self)
