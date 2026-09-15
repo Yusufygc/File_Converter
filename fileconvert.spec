@@ -4,28 +4,53 @@ PyInstaller Spec — FileConvert Pro
 ====================================
 Build: pyinstaller fileconvert.spec
 Çıktı: dist/FileConvertPro/FileConvertPro.exe
-
---onedir modu kullanılır (--onefile değil): PyInstaller'ın --onefile
-modu her başlangıçta kendini geçici bir dizine açar; bu, LibreOffice/
-MS Office subprocess çağrılarıyla (bkz. docs/wiki/libreoffice-motoru.md)
-olası geçici-dizin çakışmalarını önlemek için --onedir tercih edildi.
-
-.exe simgesi için ayrı bir .ico dosyası şimdilik yok (mevcut varlıklar
-yalnızca .svg/.png) — bkz. docs/wiki/paketleme.md.
 """
 
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+
 block_cipher = None
+
+datas = [
+    ('assets', 'assets'),
+    ('ui_qml/qml', 'ui_qml/qml'),
+]
+try:
+    datas += collect_data_files('pdf2docx')
+except Exception:
+    pass
+
+hiddenimports = [
+    'win32com',
+    'win32com.client',
+    'fitz',
+    'docx',
+    'pytesseract',
+    'PIL',
+    'openpyxl',
+    'odf',
+    'PySide6.QtQuick',
+    'PySide6.QtQml',
+    'PySide6.QtCore',
+    'PySide6.QtGui',
+    'PySide6.QtWidgets',
+]
+hiddenimports += collect_submodules('core')
+hiddenimports += collect_submodules('ui_qml')
+try:
+    hiddenimports += collect_submodules('pdf2docx')
+except Exception:
+    pass
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets')],
-    hiddenimports=[],
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['tkinter', 'matplotlib', 'scipy'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -42,8 +67,9 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
+    icon='assets/icons/app_icon.ico',
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -57,7 +83,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name='FileConvertPro',
 )

@@ -50,9 +50,7 @@ class FileItemWidget(QWidget):
 
         # Dosya adı
         self._name_label = QLabel(self.file_path.name)
-        self._name_label.setStyleSheet(
-            f"color: {PALETTE['text_primary']}; font-size: 13px; font-weight: 600; background: transparent;"
-        )
+        self._name_label.setObjectName("fileNameLabel")
         self._name_label.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
@@ -62,47 +60,59 @@ class FileItemWidget(QWidget):
         size_kb = self.file_path.stat().st_size / 1024 if self.file_path.exists() else 0
         size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
         self._size_label = QLabel(size_str)
+        self._size_label.setObjectName("fileSizeLabel")
         self._size_label.setFixedWidth(64)
         self._size_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self._size_label.setStyleSheet(
-            f"color: {PALETTE['text_muted']}; font-size: 11px; background: transparent;"
-        )
 
-        # Durum
+        # Durum — dinamik (bekliyor/dönüştürülüyor/başarılı/hatalı), tema
+        # değişiminde retheme() ile PALETTE'ten yeniden okunur.
+        self._status_kind = "idle"
         self._status_label = QLabel("Bekliyor")
         self._status_label.setFixedWidth(110)
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self._status_label.setStyleSheet(
-            f"color: {PALETTE['text_muted']}; font-size: 11px; background: transparent;"
-        )
+        self._apply_status_style()
 
         layout.addWidget(self._icon)
         layout.addWidget(self._name_label)
         layout.addWidget(self._size_label)
         layout.addWidget(self._status_label)
 
-    def set_converting(self) -> None:
-        self._status_label.setText("Dönüştürülüyor...")
+    def _apply_status_style(self) -> None:
+        """`self._status_kind`'e göre durum label'ını güncel PALETTE ile boyar."""
+        styles = {
+            "idle":       (PALETTE['text_muted'], 400),
+            "converting": (PALETTE['warning'],    600),
+            "success":    (PALETTE['success'],    600),
+            "error":      (PALETTE['error'],      600),
+        }
+        color, weight = styles[self._status_kind]
         self._status_label.setStyleSheet(
-            f"color: {PALETTE['warning']}; font-size: 11px; background: transparent; font-weight: 600;"
+            f"color: {color}; font-size: 11px; background: transparent; font-weight: {weight};"
         )
+
+    def retheme(self) -> None:
+        """Tema değiştiğinde son durumu güncel PALETTE ile yeniden boyar."""
+        self._apply_status_style()
+
+    def set_converting(self) -> None:
+        self._status_kind = "converting"
+        self._status_label.setText("Dönüştürülüyor...")
+        self._apply_status_style()
 
     def set_result(self, result: ConversionResult) -> None:
         if result.success:
             icon_path = get_resource_path("assets/icons/success.svg")
             self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
             elapsed = f"{result.elapsed_seconds:.1f}s"
+            self._status_kind = "success"
             self._status_label.setText(f"✓ Tamam  {elapsed}")
-            self._status_label.setStyleSheet(
-                f"color: {PALETTE['success']}; font-size: 11px; background: transparent; font-weight: 600;"
-            )
+            self._apply_status_style()
         else:
             icon_path = get_resource_path("assets/icons/error.svg")
             self._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
+            self._status_kind = "error"
             self._status_label.setText("Hata")
-            self._status_label.setStyleSheet(
-                f"color: {PALETTE['error']}; font-size: 11px; background: transparent; font-weight: 600;"
-            )
+            self._apply_status_style()
             self._name_label.setToolTip(result.error_message)
 
 
@@ -192,4 +202,11 @@ class FileListWidget(QWidget):
         for widget in self._path_to_widget.values():
             icon_path = icon_path_for(widget.file_path.suffix)
             widget._icon.setPixmap(QIcon(icon_path).pixmap(20, 20))
+            widget._status_kind = "idle"
             widget._status_label.setText("Bekliyor")
+            widget._apply_status_style()
+
+    def retheme(self) -> None:
+        """Tema değiştiğinde her dosya satırının rengini günceller."""
+        for widget in self._path_to_widget.values():
+            widget.retheme()

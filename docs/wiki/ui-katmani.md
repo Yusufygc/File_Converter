@@ -26,8 +26,12 @@ Composition root / controller. Sorumlulukları:
   `_restore_settings()` (`__init__` sonrası, combo doldurulduktan sonra)
   ve `closeEvent()` (kapanışta kaydeder).
 - Tema butonu (`_theme_btn`, header'da `🌙`/`☀️`) — `_on_theme_toggle_clicked()`
-  tercihi `AppSettings.save_theme_mode()` ile kaydeder, "yeniden
-  başlatınca uygulanır" mesajı gösterir (canlı geçiş yok, bkz. `ui/styles/theme.py`).
+  tercihi `AppSettings.save_theme_mode()` ile kaydeder ve **anında**
+  uygular: `ui/styles/theme.py`'deki `apply_theme()` çağrılır, dönen
+  QSS `QApplication.instance().setStyleSheet()` ile uygulanır
+  (bkz. `ui/styles/theme.py`). Duruma göre renklenen (başarı/hata/
+  uyarı) widget'lar ayrıca `_refresh_engine_display()` ve
+  `FileListWidget.retheme()` ile yeniden çizilir.
 - Birleştirme modu — `isinstance(active_converter, IMergeConverter)` ise
   options panelindeki onay kutusu görünür olur. İşaretliyse
   `_start_conversion()`, `start_batch_conversion()` yerine
@@ -114,13 +118,33 @@ Toplu dönüşüm bitince özet gösterir. `page_count > 1` olan sonuçlarda
 `DARK_PALETTE`/`LIGHT_PALETTE` dict'leri + `build_style(palette) -> str`
 (parametrize edilmiş QSS üretimi). Modül **import edilir edilmez**
 (`QSettings(ORG_NAME, APP_NAME)` ile, `QApplication` gerektirmeden)
-kayıtlı tema tercihine göre `PALETTE`/`MAIN_STYLE` seçilir. Diğer tüm
-dosyalardaki `from ui.styles.theme import PALETTE` importları bu
-tek-seferlik çözümlemeyi olduğu gibi alır — Python'un modül önbelleği
-sayesinde tutarlılık garanti edilir. **Canlı (restart'sız) tema geçişi
-desteklenmez**: birçok widget dosyası `PALETTE[...]`'i inşa anında
-inline `setStyleSheet()` içine gömüyor; bunu QSS'e taşımak ayrı bir
-refactor gerektirir, bilinçli olarak kapsam dışı bırakıldı.
+kayıtlı tema tercihine göre `PALETTE` (bir **kopya** dict —
+`dict(LIGHT_PALETTE|DARK_PALETTE)`, sabitlerin kendisi değil) ve
+`MAIN_STYLE` seçilir.
+
+**Canlı tema geçişi**: `apply_theme(mode) -> str` `PALETTE`'i **yerinde**
+günceller (`clear()` + `update()`) — nesne kimliği korunur, bu yüzden
+`from ui.styles.theme import PALETTE` yapan her dosya
+(`options_panel.py`, `file_list.py`, `drop_zone.py`,
+`summary_dialog.py`, `main_window.py`) Python'un modül önbelleği
+sayesinde aynı dict'e referans tutar ve çağrıdan hemen sonra güncel
+değerleri görür. `apply_theme()` yeni QSS'i de döner;
+`MainWindow._on_theme_toggle_clicked()` bunu
+`QApplication.instance().setStyleSheet()` ile uygular.
+
+Bu mekanizma sadece **statik** (tema dışında değişmeyen) stilleri
+kapsar — onlar merkezi QSS'e objectName selector'larıyla taşındı
+(`#sectionHeaderLabel`, `#sectionDivider`, `#formLabel`,
+`#dropZonePrimaryLabel`, `#dropZoneExtLabel`, `#fileNameLabel`,
+`#fileSizeLabel`, `#footerBar`, `#appTitle`, `#formatBadge`) —
+`setStyleSheet()` yeniden uygulandığında Qt bunları otomatik yeniden
+çizer. **Duruma göre renklenen** (başarı/hata/uyarı) birkaç widget hâlâ
+inline `setStyleSheet()` kullanıyor çünkü rengi hem temaya hem iş
+durumuna bağlı (`FileItemWidget._status_kind`, options panel/footer
+motor durumu); bunlar tema değiştiğinde `FileListWidget.retheme()` ve
+`MainWindow._refresh_engine_display()` ile son durumlarını güncel
+`PALETTE`'ten yeniden okuyarak boyanır. `summary_dialog.py` kalıcı açık
+kalmadığı için (her açılışta güncel `PALETTE`'i okur) hiç değişmedi.
 
 ## İlgili Sayfalar
 

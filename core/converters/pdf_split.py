@@ -1,12 +1,15 @@
 """
 PDF Bölme
 ===========
-PyMuPDF (fitz) ile bir PDF'in her sayfasını ayrı bir PDF dosyasına
-böler. `PdfToJpgConverter`'ın çok-sayfa-ayrı-dosya deseniyle aynı
-mantık — bu, mevcut "1 girdi → N çıktı" modeline (BaseConverter +
-ConvertOutcome) zaten oturuyor, `IMergeConverter` gerekmez.
+PyMuPDF (fitz) ile bir PDF'in sayfalarını ayrı PDF dosyalarına böler.
+`PdfToJpgConverter`'ın çok-sayfa-ayrı-dosya deseniyle aynı mantık — bu,
+mevcut "1 girdi → N çıktı" modeline (BaseConverter + ConvertOutcome)
+zaten oturuyor, `IMergeConverter` gerekmez.
 
-Sayfa ARALIĞI seçimi (örn. "1-5") kapsam dışı — her sayfa ayrı dosya.
+`options.page_range` boşsa tüm sayfalar bölünür (varsayılan, geriye
+dönük uyumlu). Doluysa (örn. "1-3,5,7-9") yalnızca belirtilen sayfalar
+— `IPageRangeSelectable.parse_page_range()` — kaynak içindeki gerçek
+sayfa numarasıyla adlandırılan ayrı dosyalara yazılır.
 
 SRP : Yalnızca PDF bölmeden sorumlu.
 """
@@ -14,13 +17,14 @@ SRP : Yalnızca PDF bölmeden sorumlu.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.interfaces.converter_interface import ConversionOptions
+from core.interfaces.page_range_interface import IPageRangeSelectable
 
 
-class PdfSplitConverter(BaseConverter):
+class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
     """
     PDF → PDF (bölünmüş) dönüştürücü.
     Kaynak ve hedef uzantı aynı olduğu için `get_output_path()` override
@@ -48,6 +52,39 @@ class PdfSplitConverter(BaseConverter):
         out_dir = options.output_dir or source_path.parent
         return out_dir / f"{source_path.stem}_sayfa1.pdf"
 
+    def parse_page_range(self, page_range: str, page_count: int) -> List[int]:
+        pages: List[int] = []
+        seen = set()
+        for part in page_range.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                start_str, _, end_str = part.partition("-")
+                try:
+                    start, end = int(start_str.strip()), int(end_str.strip())
+                except ValueError:
+                    raise ValueError(f"Geçersiz sayfa aralığı: '{part}'") from None
+            else:
+                try:
+                    start = end = int(part)
+                except ValueError:
+                    raise ValueError(f"Geçersiz sayfa numarası: '{part}'") from None
+
+            if start < 1 or end < start or end > page_count:
+                raise ValueError(
+                    f"Geçersiz sayfa aralığı: '{part}' (belge {page_count} sayfa içeriyor)"
+                )
+
+            for page_num in range(start, end + 1):
+                if page_num not in seen:
+                    seen.add(page_num)
+                    pages.append(page_num)
+
+        if not pages:
+            raise ValueError("Sayfa aralığı boş.")
+        return pages
+
     def _do_convert(
         self,
         source_path: Path,
@@ -59,21 +96,27 @@ class PdfSplitConverter(BaseConverter):
         doc = fitz.open(str(source_path))
         try:
             page_count = doc.page_count
+            pages = (
+                self.parse_page_range(options.page_range, page_count)
+                if options.page_range
+                else list(range(1, page_count + 1))
+            )
+
             first_output = output_path
-            for i in range(page_count):
-                page_output = output_path.with_name(f"{source_path.stem}_sayfa{i + 1}.pdf")
+            for idx, page_num in enumerate(pages):
+                page_output = output_path.with_name(f"{source_path.stem}_sayfa{page_num}.pdf")
                 page_doc = fitz.open()
                 try:
-                    page_doc.insert_pdf(doc, from_page=i, to_page=i)
+                    page_doc.insert_pdf(doc, from_page=page_num - 1, to_page=page_num - 1)
                     page_doc.save(str(page_output))
                 finally:
                     page_doc.close()
-                if i == 0:
+                if idx == 0:
                     first_output = page_output
         finally:
             doc.close()
 
-        return ConvertOutcome(output_path=first_output, page_count=page_count)
+        return ConvertOutcome(output_path=first_output, page_count=len(pages))
 
     @property
     def unavailable_hint(self) -> str:

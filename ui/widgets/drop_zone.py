@@ -11,7 +11,6 @@ from PySide6.QtCore import Signal, Qt, QSize
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from ui.styles.theme import PALETTE
 from core.utils.resource_helper import get_resource_path
 from ui.file_discovery import collect_files
 
@@ -53,17 +52,13 @@ class DropZoneWidget(QWidget):
         # Primary text
         self._primary_label = QLabel("Dosyaları veya bir klasörü buraya sürükleyin ya da tıklayın")
         self._primary_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._primary_label.setStyleSheet(
-            f"font-size: 13px; font-weight: 600; color: {PALETTE['text_primary']}; background: transparent; border: none;"
-        )
+        self._primary_label.setObjectName("dropZonePrimaryLabel")
 
         # Secondary text
         ext_list = "  ·  ".join(e.upper() for e in sorted(self._accepted))
         self._ext_label = QLabel(ext_list)
         self._ext_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._ext_label.setStyleSheet(
-            f"font-size: 11px; color: {PALETTE['text_muted']}; background: transparent; border: none; letter-spacing: 0.5px;"
-        )
+        self._ext_label.setObjectName("dropZoneExtLabel")
 
         layout.addWidget(icon_label)
         layout.addWidget(self._primary_label)

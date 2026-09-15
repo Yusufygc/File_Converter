@@ -4,6 +4,60 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-16] [INGEST] | Akıllı PDF Analizi (PdfInspector) ve OCR Motoru Entegrasyonu
+
+Taranmış (görüntü tabanlı) ve dijital PDF'lerin dönüşüm kalitesini artırmak için
+`core/utils/pdf_inspector.py` ve `core/converters/ocr_engine.py` eklendi.
+Dijital PDF'ler doğrudan `pdf2docx` ile 1-2 saniyede kusursuz dönüştürülür.
+Taranmış PDF'lerde ise Tesseract OCR varsa metin çıkarılarak düzenlenebilir
+Word belgesi üretilir; OCR yoksa LibreOffice'in çizimleri parçalama hatası yerine
+`python-docx` ile temiz, bozulmayan sayfa görselleri gömülür. `PdfToTxtConverter`'a
+da OCR desteği eklendi. Test sayısı 106'dan 109'a çıktı. Detay: [[donusturucu-envanteri]].
+
+## [2026-09-15] [INGEST] | QML (Qt Quick) modern arayüz mimarisi inşa edildi
+
+`ui_qml/` altında sıfırdan modern, akıcı ve animasyonlu PySide6 QML (Qt Quick)
+arayüzü oluşturuldu. Backend (`core/`) katmanına kesinlikle dokunulmadı; eski `ui/`
+katmanı yedek olarak korundu. `AppBridge` (`QObject`) ve `FileListModel`
+(`QAbstractListModel`) köprüsüyle tüm converter kataloğu, sürükle-bırak,
+motor seçimi, sayfa aralığı, birleştirme modu ve kalite kontrolleri QML'e
+bağlandı. Açık/Koyu (Light/Dark) tema geçişi dinamikleştirildi ve `QSettings` ile
+kalıcı hale getirildi. `main.py` yeni QML motoruna (`QQmlApplicationEngine`)
+bağlandı. Test sayısı 102'den 106'ya çıktı. Detay: [[ui-katmani]].
+
+## [2026-09-15] [FIX] | ComboBox popup + QFont uyarısı + canlı tema geçişi
+
+Native Windows stili (`windowsvista`/`windows11`) QSS'i tam
+desteklemediği için `QComboBox` popup'ı okunaksız (siyah) çiziliyordu
+ve popup boyutlandırma kodu `QFont::setPointSize: Point size <= 0`
+uyarısı basıyordu — `main.py`'de `QApplication.setStyle(QStyleFactory.create("Fusion"))`
+eklenerek kökten çözüldü. Ayrıca tema geçişi artık restart gerektirmiyor:
+`ui/styles/theme.py`'ye `apply_theme(mode)` eklendi (kritik detay:
+`PALETTE` artık `DARK_PALETTE`/`LIGHT_PALETTE`'in kendisi değil bir
+**kopyası** — `apply_theme()` onu yerinde `clear()`+`update()` ile
+değiştiriyor; kopyalanmasaydı bu işlem sabit paletleri de bozardı).
+Statik (tema dışı değişmeyen) inline `setStyleSheet()` çağrıları
+merkezi QSS'e objectName selector'larıyla taşındı
+(`options_panel.py`, `drop_zone.py`, `file_list.py`, `main_window.py`);
+duruma göre renklenen (başarı/hata/uyarı) birkaç widget
+`retheme()`/`_refresh_engine_display()` ile tema değişince son
+durumunu güncel `PALETTE`'ten yeniden okuyor. Detay: [[ui-katmani]].
+
+## [2026-09-13] [INGEST] | PDF Böl: sayfa/aralık seçimi
+
+`PdfSplitConverter` artık `options.page_range` ile "1-3,5,7-9" gibi bir
+aralık kabul ediyor — boşsa eski davranış (tüm sayfalar) korunuyor.
+`IEngineSelectable`/`IMergeConverter` ile aynı opsiyonel capability
+deseninde yeni `IPageRangeSelectable` (`core/interfaces/page_range_interface.py`)
+eklendi; `MainWindow` belirli bir converter'ı hardcode etmeden
+`isinstance()` ile options panelindeki "Aralık:" alanını gösterip
+gizliyor (`OptionsPanelWidget.set_page_range_available()`). Seçilen
+sayfalar kaynaktaki gerçek numarasıyla adlandırılıyor (`ad_sayfa3.pdf`),
+sıralı yeniden numaralandırma yok. Geçersiz aralık `ValueError` fırlatır,
+mevcut `BaseConverter.convert()` try/except'i bunu `error_message`'a
+çevirir — ayrı hata yolu eklenmedi. Test sayısı 96'dan 102'ye çıktı.
+Detay: [[donusturucu-envanteri]], [[converter-arayuzu]], [[ui-katmani]].
+
 ## [2026-09-12] [INGEST] | Ofis format genişletmesi: 9 yeni converter
 
 Word/Excel/PDF/CSV/ODT/ODS arası eksik yaygın dönüşümler eklendi

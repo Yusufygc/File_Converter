@@ -19,6 +19,7 @@ class ConversionOptions:
     dpi: int = 150
     quality: int = 90
     overwrite_existing: bool = True
+    page_range: Optional[str] = None
 
     def __post_init__(self):
         if self.dpi < 72 or self.dpi > 600:

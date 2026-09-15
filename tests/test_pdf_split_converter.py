@@ -51,3 +51,69 @@ def test_validate_rejects_non_pdf(tmp_path):
     conv = PdfSplitConverter()
 
     assert conv.validate(txt) is False
+
+
+def test_page_range_splits_only_selected_pages(tmp_path):
+    pdf = tmp_path / "belge.pdf"
+    _make_pdf(pdf, page_count=5)
+    conv = PdfSplitConverter()
+
+    result = conv.convert(
+        pdf, ConversionOptions(output_dir=tmp_path, page_range="1-2,4")
+    )
+
+    assert result.success is True
+    assert result.page_count == 3
+    for i in (1, 2, 4):
+        assert (tmp_path / f"belge_sayfa{i}.pdf").exists()
+    for i in (3, 5):
+        assert not (tmp_path / f"belge_sayfa{i}.pdf").exists()
+
+
+def test_page_range_single_page_number(tmp_path):
+    pdf = tmp_path / "belge.pdf"
+    _make_pdf(pdf, page_count=3)
+    conv = PdfSplitConverter()
+
+    result = conv.convert(pdf, ConversionOptions(output_dir=tmp_path, page_range="2"))
+
+    assert result.success is True
+    assert result.page_count == 1
+    assert result.output_path == tmp_path / "belge_sayfa2.pdf"
+
+
+def test_page_range_out_of_bounds_fails(tmp_path):
+    pdf = tmp_path / "belge.pdf"
+    _make_pdf(pdf, page_count=3)
+    conv = PdfSplitConverter()
+
+    result = conv.convert(pdf, ConversionOptions(output_dir=tmp_path, page_range="5"))
+
+    assert result.success is False
+    assert "5" in result.error_message
+
+
+def test_page_range_invalid_format_fails(tmp_path):
+    pdf = tmp_path / "belge.pdf"
+    _make_pdf(pdf, page_count=3)
+    conv = PdfSplitConverter()
+
+    result = conv.convert(pdf, ConversionOptions(output_dir=tmp_path, page_range="abc"))
+
+    assert result.success is False
+
+
+def test_page_range_reversed_bounds_fails(tmp_path):
+    pdf = tmp_path / "belge.pdf"
+    _make_pdf(pdf, page_count=3)
+    conv = PdfSplitConverter()
+
+    result = conv.convert(pdf, ConversionOptions(output_dir=tmp_path, page_range="3-1"))
+
+    assert result.success is False
+
+
+def test_parse_page_range_dedupes_preserving_order():
+    conv = PdfSplitConverter()
+
+    assert conv.parse_page_range("3,1-2,2", page_count=5) == [3, 1, 2]

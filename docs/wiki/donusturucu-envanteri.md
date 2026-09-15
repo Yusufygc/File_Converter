@@ -15,13 +15,13 @@ anahtarına sınıf adı eklenmesi bunların birbirini ezmesini önlüyor
 | `DocxToTxtConverter` | `.docx` → `.txt` | `python-docx` | Paralel-güvenli | LibreOffice gerekmez — yalnızca `document.paragraphs` metnini çıkarır (tablo/başlık kapsanmaz) |
 | `DocxToOdtConverter` | `.docx` → `.odt` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı (bkz. aşağıdaki not) |
 | `OdtToDocxConverter` | `.odt` → `.docx` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |
-| `PdfToDocxConverter` | `.pdf` → `.docx` | pdf2docx → LibreOffice fallback | — (otomatik seçer) | `pdf2docx` yalnızca `.docx` üretir, ODT'ye düşemez |
+| `PdfToDocxConverter` | `.pdf` → `.docx` | pdf2docx → OCR (Tesseract) → Görsel Gömme → LibreOffice fallback | Akıllı Belge Analizi (`PdfInspector`) | Dijital PDF'lerde `pdf2docx` (1-2s); taranmış PDF'lerde OCR (Tesseract); OCR yoksa temiz sayfa görseli gömme |
 | `PdfToOdtConverter` | `.pdf` → `.odt` | Yalnızca LibreOffice | — | — |
 | `PdfToJpgConverter` | `.pdf` → `.jpg` | PyMuPDF (`fitz`) | Paralel-güvenli | **Çok sayfalı PDF'te her sayfa ayrı dosya**: `ad_p1.jpg, ad_p2.jpg, ...`; tek sayfada `ad.jpg`. `options.dpi` render çözünürlüğü, `options.quality` JPEG kalitesi |
 | `PdfToPngConverter` | `.pdf` → `.png` | PyMuPDF (`fitz`) | Paralel-güvenli | `PdfToJpgConverter` ile aynı rasterizasyon mantığı (çok sayfada `_p{n}` suffix); PNG kayıpsız olduğu için `options.quality` kullanılmaz |
-| `PdfToTxtConverter` | `.pdf` → `.txt` | PyMuPDF (`fitz`) | Paralel-güvenli | Tüm sayfaların metni **tek** `.txt` dosyasında `--- Sayfa N ---` ayracıyla birleşir (görsel dönüşümlerin sayfa-başına-dosya deseninden farklı) |
+| `PdfToTxtConverter` | `.pdf` → `.txt` | PyMuPDF (`fitz`) + OCR (Tesseract) | Paralel-güvenli, OCR Destekli | Dijital PDF'lerde doğrudan metin çıkarımı; taranmış PDF'lerde OCR motoru varsa otomatik OCR ile metin çıkarır |
 | `PdfCompressConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli | Kaynak/hedef uzantı **aynı** — `get_output_path()` override edilir (`{stem}_sikistirilmis.pdf`), aksi halde varsayılan çıktı klasöründe kaynağın üzerine yazardı. Sayfaları görsele çevirmez, `doc.save(garbage=4, deflate=True, ...)` ile akış temizliği yapar |
-| `PdfSplitConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli | Her sayfayı ayrı dosyaya böler: `ad_sayfa1.pdf, ad_sayfa2.pdf, ...` (tek sayfada bile — kaynakla çakışmayı önler). Sayfa aralığı seçimi (örn. "1-5") desteklenmiyor |
+| `PdfSplitConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli, `IPageRangeSelectable` | Her sayfayı ayrı dosyaya böler: `ad_sayfa1.pdf, ad_sayfa2.pdf, ...` (tek sayfada bile — kaynakla çakışmayı önler). `options.page_range` ile "1-3,5,7-9" gibi bir aralık verilirse yalnızca o sayfalar, kaynaktaki gerçek sayfa numarasıyla adlandırılarak üretilir (bkz. [[converter-arayuzu]]) |
 | `PdfMergeConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Birleştirme (`IMergeConverter`), Paralel-güvenli | Birden fazla PDF'i tek dosyada birleştirir; tek dosya modunda "birleştirme" kendisinin `{stem}_birlesik.pdf` kopyasını üretir (dejenere ama tutarlı) |
 | `XlsxToPdfConverter` | `.xlsx` → `.pdf` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |
 | `XlsxToCsvConverter` | `.xlsx` → `.csv` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |

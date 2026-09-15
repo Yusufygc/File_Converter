@@ -87,6 +87,7 @@ QMainWindow {{
     font-weight: 700;
     color: {palette['text_primary']};
     letter-spacing: -0.3px;
+    margin-right: 12px;
 }}
 #formatBadge {{
     font-size: 10px;
@@ -112,6 +113,20 @@ QMainWindow {{
     border: 1.5px dashed {palette['accent']};
     background-color: {palette['accent_glow']};
 }}
+#dropZonePrimaryLabel {{
+    font-size: 13px;
+    font-weight: 600;
+    color: {palette['text_primary']};
+    background: transparent;
+    border: none;
+}}
+#dropZoneExtLabel {{
+    font-size: 11px;
+    color: {palette['text_muted']};
+    background: transparent;
+    border: none;
+    letter-spacing: 0.5px;
+}}
 
 /* ── File List ──────────────────────────────────────── */
 QListWidget {{
@@ -133,6 +148,17 @@ QListWidget::item:selected {{
 }}
 QListWidget::item:hover:!selected {{
     background-color: {palette['bg_hover']};
+}}
+#fileNameLabel {{
+    color: {palette['text_primary']};
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+}}
+#fileSizeLabel {{
+    color: {palette['text_muted']};
+    font-size: 11px;
+    background: transparent;
 }}
 
 /* ── Buttons (secondary) ────────────────────────────── */
@@ -406,6 +432,24 @@ QWidget#sectionCard QLabel {{
 QWidget#sectionCard QWidget {{
     background: transparent;
 }}
+#sectionHeaderLabel {{
+    color: {palette['text_muted']};
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}}
+QFrame#sectionDivider {{
+    color: {palette['border']};
+    background: transparent;
+}}
+#formLabel {{
+    color: {palette['text_secondary']};
+    font-size: 12px;
+    background: transparent;
+}}
 
 /* ── Tooltip ────────────────────────────────────────── */
 QToolTip {{
@@ -415,6 +459,12 @@ QToolTip {{
     border-radius: 6px;
     padding: 7px 11px;
     font-size: 12px;
+}}
+
+/* ── Footer ─────────────────────────────────────────── */
+#footerBar {{
+    background: {palette['bg_surface']};
+    border-top: 1px solid {palette['border']};
 }}
 
 /* ── Status Bar Labels ──────────────────────────────── */
@@ -450,8 +500,30 @@ def _load_theme_mode() -> str:
 # zincirindeki her dosyadaki `from ui.styles.theme import PALETTE`
 # (options_panel.py, file_list.py, drop_zone.py, summary_dialog.py,
 # main_window.py) Python'un tek-seferlik modül önbelleği sayesinde
-# aynı, doğru paleti alır. Canlı (restart'sız) tema değişimi bu
-# mekanizmayla desteklenmez — bkz. docs/wiki/ui-katmani.md.
+# aynı, doğru paleti alır.
 _MODE = _load_theme_mode()
-PALETTE = LIGHT_PALETTE if _MODE == "light" else DARK_PALETTE
+# dict(...) ile KOPYALANIR — `apply_theme()` PALETTE'i yerinde
+# temizleyip (clear()) yeniden dolduruyor (update()); PALETTE doğrudan
+# DARK_PALETTE/LIGHT_PALETTE nesnesinin kendisi olsaydı bu işlem o
+# sabit paleti de boşaltıp bozardı.
+PALETTE = dict(LIGHT_PALETTE if _MODE == "light" else DARK_PALETTE)
 MAIN_STYLE = build_style(PALETTE)
+
+
+def apply_theme(mode: str) -> str:
+    """
+    Paleti yerinde (in-place) günceller — `PALETTE` nesne kimliği
+    korunur, bu sayede `from ui.styles.theme import PALETTE` yapan her
+    modüldeki referans aynı dict'i gösterdiği için içeriği anında
+    güncel olur (canlı tema geçişi buna dayanır, bkz.
+    docs/wiki/ui-katmani.md). Yeni QSS'i döner; çağıran
+    (`MainWindow`) bunu `QApplication.setStyleSheet()` ile uygular ve
+    dinamik (duruma göre renklenen) widget'ların `retheme()`'ini
+    tetikler.
+    """
+    global MAIN_STYLE
+    new_palette = LIGHT_PALETTE if mode == "light" else DARK_PALETTE
+    PALETTE.clear()
+    PALETTE.update(new_palette)
+    MAIN_STYLE = build_style(PALETTE)
+    return MAIN_STYLE

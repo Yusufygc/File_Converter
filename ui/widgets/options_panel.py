@@ -36,18 +36,14 @@ def _section_header(text: str) -> QLabel:
     """Grup başlığı — GroupBox yerine sade label + ince çizgi."""
     lbl = QLabel(text)
     lbl.setMinimumHeight(16)  # Negatif yükseklik → QFont uyarısını önler
-    lbl.setStyleSheet(
-        f"color: {PALETTE['text_muted']};"
-        f"font-size: 10px; font-weight: 700; letter-spacing: 1.2px;"
-        f"background: transparent; padding: 0; margin: 0;"
-    )
+    lbl.setObjectName("sectionHeaderLabel")
     return lbl
 
 
 def _divider() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
-    line.setStyleSheet(f"color: {PALETTE['border']}; background: transparent;")
+    line.setObjectName("sectionDivider")
     line.setFixedHeight(1)
     line.setMinimumHeight(1)
     return line
@@ -58,9 +54,7 @@ def _form_label(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setMinimumWidth(50 if text else 0)
     lbl.setMinimumHeight(24) # Font uyarısını önlemek için minimum yükseklik
-    lbl.setStyleSheet(
-        f"color: {PALETTE['text_secondary']}; font-size: 12px; background: transparent;"
-    )
+    lbl.setObjectName("formLabel")
     # NOT: setSizePolicy(Fixed, Fixed) burada KULLANILMAMALI.
     # QFormLayout etiket sütununa negatif boyut atadığında
     # "QFont::setPointSize: Point size <= 0" uyarısı üretir.
@@ -108,13 +102,6 @@ class OptionsPanelWidget(QWidget):
     def _section(self, title: str, form_widget: QWidget) -> QWidget:
         """Başlık + içerik kartı."""
         card = QWidget()
-        card.setStyleSheet(
-            f"QWidget#sectionCard {{"
-            f"  background: {PALETTE['bg_card']};"
-            f"  border: 1px solid {PALETTE['border']};"
-            f"  border-radius: 8px;"
-            f"}}"
-        )
         card.setObjectName("sectionCard")
 
         v = QVBoxLayout(card)
@@ -162,6 +149,20 @@ class OptionsPanelWidget(QWidget):
         self._merge_label.setVisible(False)
         self._merge_check.setVisible(False)
         form.addRow(self._merge_label, self._merge_check)
+
+        # Sayfa aralığı alanı — yalnızca IPageRangeSelectable destekleyen
+        # converter'lar seçiliyken görünür (bkz. set_page_range_available).
+        self._page_range_available = False
+        self._page_range_label = _form_label("Aralık:")
+        self._page_range_edit = QLineEdit()
+        self._page_range_edit.setPlaceholderText("örn: 1-3,5,7-9 (boş: tüm sayfalar)")
+        self._page_range_edit.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self._page_range_edit.textChanged.connect(self.options_changed)
+        self._page_range_label.setVisible(False)
+        self._page_range_edit.setVisible(False)
+        form.addRow(self._page_range_label, self._page_range_edit)
 
         return w
 
@@ -321,6 +322,7 @@ class OptionsPanelWidget(QWidget):
             dpi=self._dpi_spin.value(),
             quality=self._quality_spin.value(),
             overwrite_existing=self._overwrite_check.isChecked(),
+            page_range=self._page_range_edit.text().strip() or None,
         )
 
     def selected_engine(self) -> Optional[ConversionEngine]:
@@ -374,6 +376,19 @@ class OptionsPanelWidget(QWidget):
 
     def is_merge_mode(self) -> bool:
         return self._merge_available and self._merge_check.isChecked()
+
+    def set_page_range_available(self, available: bool) -> None:
+        """
+        Sayfa aralığı giriş alanını gösterir/gizler. `MainWindow`,
+        `isinstance(converter, IPageRangeSelectable)` sonucuna göre çağırır.
+        Gizlenirken metin temizlenir — uyumsuz bir converter'a geçildiğinde
+        eski aralık girdisinin sessizce kalmasını önler (bkz. `set_merge_mode_available`).
+        """
+        self._page_range_available = available
+        self._page_range_label.setVisible(available)
+        self._page_range_edit.setVisible(available)
+        if not available:
+            self._page_range_edit.clear()
 
     def set_output_dir(self, path: Optional[Path]) -> None:
         """Kayıtlı çıktı klasörünü sinyal fırlatmadan geri yükler."""

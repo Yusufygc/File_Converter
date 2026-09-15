@@ -102,6 +102,28 @@ converter için `True` yapıp capability deseni bozardı. `MergeCapableConverter
 implemente eder. Şu an `JpgToPdfConverter` ve `PdfMergeConverter` bunu
 extend eder (bkz. [[donusturucu-envanteri]]).
 
+## `IPageRangeSelectable` (opsiyonel capability)
+
+`core/interfaces/page_range_interface.py`. `IEngineSelectable`/
+`IMergeConverter` ile aynı desen — kaynağın yalnızca belirli sayfalarını/
+aralıklarını işleyebilen converter'lar için:
+
+```python
+parse_page_range(page_range: str, page_count: int) -> List[int]
+```
+
+UI, bir converter'ın sayfa aralığı girişi sunup sunmadığını
+`isinstance(converter, IPageRangeSelectable)` ile anlar — options
+panelinde "Aralık:" alanı olarak görünür (bkz. [[ui-katmani]]). Şu an
+yalnızca `PdfSplitConverter` implemente eder: `page_range` boşsa
+(`ConversionOptions.page_range is None`) tüm sayfalar bölünür (eski
+davranış), doluysa yalnızca `parse_page_range()`'in döndürdüğü sayfa
+numaraları — kaynaktaki gerçek numarasıyla — ayrı dosyalara yazılır.
+`parse_page_range()`, geçersiz format veya belge dışı sayfa numarasında
+`ValueError` fırlatır; bu, `BaseConverter.convert()`'ın var olan
+try/except'i tarafından yakalanıp `ConversionResult.error_message`'a
+dönüşür — ayrı bir hata yolu eklenmedi.
+
 ## Factory-Tarzı Taban Sınıflar: "Abstract Kalarak Keşiften Kaçınma"
 
 `core/converters/office_conversions.py`'deki `SimpleLibreOfficeConverter(BaseConverter)`
@@ -130,9 +152,11 @@ discovery bunu somut bir converter sanıp `cls()` ile örneklemeye
 
 ## Value Object'ler
 
-- `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True)` —
+- `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True, page_range=None)` —
   `dpi` LibreOffice render'ı ve PDF→JPG rasterizasyon çözünürlüğü için;
-  `quality` yalnızca PDF→JPG'nin JPEG sıkıştırması için kullanılır.
+  `quality` yalnızca PDF→JPG'nin JPEG sıkıştırması için kullanılır;
+  `page_range` yalnızca `IPageRangeSelectable` destekleyen converter'lar
+  (şu an `PdfSplitConverter`) tarafından okunur, diğerleri yok sayar.
 - `ConversionResult(source_path, output_path, success, error_message, page_count, elapsed_seconds)`
 - `BatchConversionResult(results: List[ConversionResult])` — `total`/`success_count`/`failure_count`/`all_succeeded` property'leri
 

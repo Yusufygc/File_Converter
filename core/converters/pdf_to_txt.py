@@ -1,10 +1,9 @@
 """
 PDF → TXT Converter
 =====================
-PyMuPDF (fitz) ile PDF'in metnini çıkarır. LibreOffice bile gerekmez —
-`fitz.Page.get_text()` yeterli. Tüm sayfalar TEK bir `.txt` dosyasında
-birleştirilir (görsel dönüşümlerin sayfa-başına-dosya deseninden farklı
-olarak — metin çıktısında tek dosya çok daha kullanışlı).
+PyMuPDF (fitz) ile PDF'in metnini çıkarır.
+Taranmış PDF'lerde OCR motoru (Tesseract) mevcutsa otomatik OCR metin çıkarımı yapar.
+Tüm sayfalar TEK bir `.txt` dosyasında `--- Sayfa N ---` ayracıyla birleştirilir.
 
 SRP : Yalnızca PDF → TXT metin çıkarmadan sorumlu.
 """
@@ -15,14 +14,20 @@ from pathlib import Path
 from typing import Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
+from core.converters.ocr_engine import OcrEngine
 from core.interfaces.converter_interface import ConversionOptions
+from core.utils.pdf_inspector import is_scanned_pdf
 
 
 class PdfToTxtConverter(BaseConverter):
     """
-    PDF → TXT dönüştürücü. Tablo/başlık gibi yapısal öğeler korunmaz,
-    yalnızca düz metin çıkarılır. Sayfalar `--- Sayfa N ---` ayracıyla birleşir.
+    PDF → TXT dönüştürücü.
+    Dijital PDF'lerde PyMuPDF ile anında metin çıkarır.
+    Taranmış PDF'lerde OCR desteğiyle metni okur.
     """
+
+    def __init__(self):
+        self._ocr = OcrEngine()
 
     # ------------------------------------------------------------------ #
     #  IConverter interface                                                #
@@ -48,6 +53,20 @@ class PdfToTxtConverter(BaseConverter):
     ) -> Optional[ConvertOutcome]:
         import fitz
 
+        is_scanned = is_scanned_pdf(source_path)
+
+        # Taranmış PDF ve OCR mevcutsa → OCR ile metin çıkar
+        if is_scanned and self._ocr.is_available():
+            text = self._ocr.ocr_pdf_to_text(source_path)
+            output_path.write_text(text, encoding="utf-8")
+            doc = fitz.open(str(source_path))
+            try:
+                page_count = doc.page_count
+            finally:
+                doc.close()
+            return ConvertOutcome(page_count=page_count)
+
+        # Standart dijital PDF metin çıkarımı
         doc = fitz.open(str(source_path))
         try:
             page_count = doc.page_count
@@ -67,7 +86,9 @@ class PdfToTxtConverter(BaseConverter):
         return (
             "Dönüşüm motoru bulunamadı.\n\n"
             "PyMuPDF (önerilen):\n"
-            "  pip install pymupdf"
+            "  pip install pymupdf\n\n"
+            "Taranmış PDF'ler için OCR (opsiyonel):\n"
+            "  winget install UB-Mannheim.TesseractOCR"
         )
 
     # ------------------------------------------------------------------ #
@@ -84,9 +105,10 @@ class PdfToTxtConverter(BaseConverter):
 
     @property
     def active_engine_name(self) -> str:
+        if self._ocr.is_available():
+            return "PyMuPDF + OCR"
         return "PyMuPDF" if self.is_available else "Yok"
 
     @property
     def is_parallel_safe(self) -> bool:
-        # Yalnızca PyMuPDF kullanır — dış süreç/paylaşımlı durum yok.
         return True

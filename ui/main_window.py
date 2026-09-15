@@ -11,6 +11,7 @@ from typing import List
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -39,6 +40,7 @@ from core.converters.registry import ConverterRegistry
 from core.converters.discovery import register_all
 from core.interfaces.engine_interface import IEngineSelectable
 from core.interfaces.merge_interface import IMergeConverter
+from core.interfaces.page_range_interface import IPageRangeSelectable
 from core.utils.resource_helper import get_resource_path
 from ui.converter_catalog import catalog_entries
 
@@ -156,25 +158,16 @@ class MainWindow(QMainWindow):
 
         title = QLabel("FileConvert Pro")
         title.setObjectName("appTitle")
-        title.setStyleSheet(
-            f"font-size: 15px; font-weight: 700; color: {PALETTE['text_primary']};"
-            f"background: transparent; margin-right: 12px;"
-        )
 
         self._format_badge = QLabel(self._active_converter.display_name.upper())
         self._format_badge.setObjectName("formatBadge")
-        self._format_badge.setStyleSheet(
-            f"font-size: 10px; font-weight: 700; letter-spacing: 1px;"
-            f"background: {PALETTE['accent_dim']}; color: {PALETTE['accent']};"
-            f"border-radius: 4px; padding: 3px 8px;"
-        )
         badge = self._format_badge
 
         self._theme_btn = QPushButton(self._theme_button_icon())
         self._theme_btn.setObjectName("themeBtn")
         self._theme_btn.setFixedSize(32, 32)
         self._theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._theme_btn.setToolTip("Tema değiştir (yeniden başlatma gerekir)")
+        self._theme_btn.setToolTip("Tema değiştir")
         self._theme_btn.clicked.connect(self._on_theme_toggle_clicked)
 
         layout.addWidget(logo)
@@ -189,20 +182,26 @@ class MainWindow(QMainWindow):
 
     def _on_theme_toggle_clicked(self) -> None:
         """
-        Tema tercihini kaydeder ve bir sonraki başlatmada uygulanacağını
-        bildirir. `PALETTE` her dosyada import zamanında sabitlendiği
-        için (bkz. ui/styles/theme.py) canlı/restart'sız geçiş
-        desteklenmiyor — bilinçli bir sınır, bkz. docs/wiki/ui-katmani.md.
+        Tema tercihini kaydeder ve anında uygular. `ui/styles/theme.py`
+        `apply_theme()` çağrısı `PALETTE`'i yerinde günceller (nesne
+        kimliği korunur) ve yeni QSS'i döner — bu, `QApplication`
+        genelinde tüm objectName tabanlı stilleri anında yeniler.
+        Duruma göre renklenen (başarı/hata/uyarı) birkaç widget QSS'e
+        taşınamıyor; onlar `_refresh_engine_display()`/
+        `FileListWidget.retheme()` ile son durumlarını güncel PALETTE
+        ile yeniden çizer. Bkz. docs/wiki/ui-katmani.md.
         """
         current = self._settings.load_theme_mode()
         new_mode = "light" if current == "dark" else "dark"
         self._settings.save_theme_mode(new_mode)
+
+        from ui.styles import theme as theme_module
+        new_qss = theme_module.apply_theme(new_mode)
+        QApplication.instance().setStyleSheet(new_qss)
+
         self._theme_btn.setText(self._theme_button_icon())
-        QMessageBox.information(
-            self,
-            "Tema Değiştirildi",
-            "Yeni tema, uygulama yeniden başlatıldığında uygulanacak.",
-        )
+        self._refresh_engine_display()
+        self._file_list.retheme()
 
     def _build_body(self) -> QWidget:
         body = QWidget()
@@ -307,10 +306,8 @@ class MainWindow(QMainWindow):
 
     def _build_footer(self) -> QWidget:
         footer = QWidget()
+        footer.setObjectName("footerBar")
         footer.setMinimumHeight(32)
-        footer.setStyleSheet(
-            f"background: {PALETTE['bg_surface']}; border-top: 1px solid {PALETTE['border']};"
-        )
 
         layout = QHBoxLayout(footer)
         layout.setContentsMargins(16, 0, 16, 0)
@@ -344,6 +341,28 @@ class MainWindow(QMainWindow):
             active=converter.active_engine,
         )
         self._update_footer_engine(converter.active_engine_name, converter.is_available)
+
+    def _refresh_engine_display(self) -> None:
+        """
+        Motor bölümünü (options panel + footer) `self._active_converter`'ın
+        güncel durumuna göre yeniden çizer — capability protokolüyle
+        (`IEngineSelectable`), belirli bir dönüşüm türünü hardcode etmeden.
+        Hem converter değişiminde hem de tema geçişinde (dinamik
+        başarı/hata renklerini güncel PALETTE ile yeniden boyamak için)
+        çağrılır.
+        """
+        if isinstance(self._active_converter, IEngineSelectable):
+            self._options_panel.restore_engine_combo()
+            self._populate_engines()
+        else:
+            self._options_panel.set_engine_status(
+                self._active_converter.active_engine_name,
+                self._active_converter.is_available,
+            )
+            self._update_footer_engine(
+                self._active_converter.active_engine_name,
+                self._active_converter.is_available,
+            )
 
     def _on_engine_changed(self, engine) -> None:
         """
@@ -411,20 +430,13 @@ class MainWindow(QMainWindow):
             isinstance(converter, IMergeConverter)
         )
 
-        # Engine bölümü güncelle — motor seçimi destekleyip desteklemediğini
-        # belirli bir dönüşüm türünü hardcode etmeden, capability protokolüyle anla
-        if isinstance(self._active_converter, IEngineSelectable):
-            self._options_panel.restore_engine_combo()
-            self._populate_engines()
-        else:
-            self._options_panel.set_engine_status(
-                self._active_converter.active_engine_name,
-                self._active_converter.is_available,
-            )
-            self._update_footer_engine(
-                self._active_converter.active_engine_name,
-                self._active_converter.is_available,
-            )
+        # Sayfa aralığı alanı — yalnızca IPageRangeSelectable destekleyen
+        # converter'lar seçiliyken görünür
+        self._options_panel.set_page_range_available(
+            isinstance(converter, IPageRangeSelectable)
+        )
+
+        self._refresh_engine_display()
 
         self._update_ui_state()
 
