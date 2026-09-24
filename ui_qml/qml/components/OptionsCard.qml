@@ -126,7 +126,7 @@ ScrollView {
                 }
 
                 ModernButton {
-                    text: "✕"
+                    iconGlyph: "cancel"
                     pointSize: 10
                     implicitHeight: 38
                     implicitWidth: 38
@@ -152,7 +152,8 @@ ScrollView {
             bold: true
             radius: theme.radiusMedium
             variant: (typeof bridge !== "undefined" && bridge && bridge.isConverting) ? "danger" : "primary"
-            text: (typeof bridge !== "undefined" && bridge && bridge.isConverting) ? "✕   İptal Et" : "⚡   Dönüştür"
+            iconGlyph: (typeof bridge !== "undefined" && bridge && bridge.isConverting) ? "cancel" : "convert"
+            text: (typeof bridge !== "undefined" && bridge && bridge.isConverting) ? "İptal Et" : "Dönüştür"
             enabled: typeof bridge !== "undefined" && bridge && (bridge.isConverting || bridge.hasFiles)
 
             onClicked: {

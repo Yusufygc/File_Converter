@@ -2,10 +2,9 @@
 Klasör Tarama
 ==============
 Sürüklenen bir klasörden uygun uzantılı dosyaları toplar. Saf
-`pathlib` mantığı, Qt'den bağımsız — `DropZoneWidget` bunu çağırır
-ama mantığın kendisi Qt gerektirmediği için `tests/`'teki hızlı,
-Qt'siz test paketine katılabilir (`ui/icon_map.py`'nin de izlediği
-"UI-katmanında yaşayan ama Qt'siz saf mantık" deseni).
+`pathlib` mantığı, Qt'den bağımsız — `AppBridge` bunu çağırır ama
+mantığın kendisi Qt gerektirmediği için `tests/`'teki hızlı, Qt'siz
+test paketine katılabilir.
 """
 
 from __future__ import annotations

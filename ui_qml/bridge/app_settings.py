@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 from PySide6.QtCore import QSettings
 
 ORG_NAME = "YusufDev"
-APP_NAME = "FileConvert Pro"
+APP_NAME = "FileConvert"
 
 THEME_MODE_KEY = "theme/mode"
 

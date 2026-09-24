@@ -1,8 +1,9 @@
-# FileConvert Pro — Proje Talimatları
+# FileConvert — Proje Talimatları
 
-PySide6 ile yazılmış masaüstü dosya dönüştürücü uygulaması (PPTX/PDF/JPG
-arası dönüşümler). Backend (`core/`) ve frontend (`ui/`) fiziksel olarak
-ayrılmıştır; `core/` hiçbir zaman Qt import etmez.
+PySide6 (Qt Quick/QML) ile yazılmış masaüstü dosya dönüştürücü
+uygulaması (PPTX/PDF/JPG arası dönüşümler). Backend (`core/`) ve
+frontend (`ui_qml/`) fiziksel olarak ayrılmıştır; `core/` hiçbir zaman
+Qt import etmez.
 
 ## Önce Oku (No Zero-Context)
 

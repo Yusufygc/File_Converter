@@ -83,9 +83,9 @@ class FileItem:
         elif self.status == "converting":
             return "Dönüştürülüyor..."
         elif self.status == "success":
-            return f"✓ Tamam ({self.elapsed_seconds:.1f}s)"
+            return f"Tamam ({self.elapsed_seconds:.1f}s)"
         elif self.status == "error":
-            return "✕ Hata"
+            return "Hata"
         return ""
 
 

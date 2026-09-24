@@ -4,7 +4,7 @@ import QtQuick.Controls
 Rectangle {
     id: root
 
-    implicitHeight: 110
+    implicitHeight: 150
     radius: theme.radiusMedium
     color: dropArea.containsDrag ? theme.accentGlow : (mouseArea.containsMouse ? theme.bgHover : theme.bgSurface)
     border.color: dropArea.containsDrag ? theme.accent : (mouseArea.containsMouse ? theme.accent : theme.borderLight)

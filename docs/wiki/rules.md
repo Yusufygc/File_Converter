@@ -16,9 +16,10 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
   import etmez. Bu, `tests/test_00_core_has_no_qt_dependency.py` ile
   otomatik doğrulanır — bu testi geçmeyen bir değişiklik mimariyi bozmuş demektir.
 - Yeni bir dönüşüm türü `core/converters/`'a **tek dosya** eklenerek
-  tanımlanır ([[converter-ekleme]]); `ui/main_window.py` ve
-  `ui/widgets/options_panel.py`'ye elle kayıt/dropdown-item eklenmez —
-  bunlar `discovery.py` ve `converter_catalog.py` üzerinden otomatik.
+  tanımlanır ([[converter-ekleme]]); `ui_qml/bridge/app_bridge.py`'ye
+  elle kayıt/dropdown-item eklenmez — `discovery.py` ve
+  `AppBridge._categorize_converter()`'ın kural-tabanlı (sınıf adı/uzantı)
+  kategorilendirmesi üzerinden otomatik.
 - Yeni converter, `IConverter`'ı doğrudan implemente etmek yerine
   `BaseConverter`'dan türetilir (bkz. [[converter-arayuzu]]) — ortak
   validate/timing/hata-sarmalama mantığı tekrar yazılmaz.

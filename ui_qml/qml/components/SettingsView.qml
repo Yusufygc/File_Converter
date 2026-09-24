@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../Icons.js" as Icons
 
 ScrollView {
     id: root
@@ -26,41 +27,29 @@ ScrollView {
 
             Item { Layout.preferredHeight: 4 }
 
-            // ── Üst Başlık & Geri Dön Butonu ─────────────────────────
-            RowLayout {
+            // ── Üst Başlık ────────────────────────────────────────────
+            Column {
                 Layout.fillWidth: true
-                spacing: 12
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 2
 
-                ModernButton {
-                    text: "←  Ana Sayfa"
-                    variant: "secondary"
-                    pointSize: 10
-                    implicitHeight: 36
-                    onClicked: root.backRequested()
+                Text {
+                    text: "Ayarlar ve Tercihler"
+                    font.family: theme.fontFamily
+                    font.pointSize: 13
+                    font.bold: true
+                    color: theme.textPrimary
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    horizontalAlignment: Text.AlignHCenter
                 }
 
-                Item { Layout.fillWidth: true }
-
-                Column {
-                    Layout.alignment: Qt.AlignRight
-                    spacing: 2
-
-                    Text {
-                        text: "Ayarlar ve Tercihler"
-                        font.family: theme.fontFamily
-                        font.pointSize: 13
-                        font.bold: true
-                        color: theme.textPrimary
-                        horizontalAlignment: Text.AlignRight
-                    }
-
-                    Text {
-                        text: "Dönüşüm motoru, kalite parametreleri ve OCR yapılandırması"
-                        font.family: theme.fontFamily
-                        font.pointSize: 9
-                        color: theme.textMuted
-                        horizontalAlignment: Text.AlignRight
-                    }
+                Text {
+                    text: "Dönüşüm motoru, kalite parametreleri ve OCR yapılandırması"
+                    font.family: theme.fontFamily
+                    font.pointSize: 9
+                    color: theme.textMuted
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
 
@@ -257,19 +246,32 @@ ScrollView {
 
                     Rectangle {
                         height: 26
-                        width: ocrStatusLabel.implicitWidth + 16
+                        width: ocrStatusRow.implicitWidth + 16
                         radius: 13
                         color: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ? theme.successDim : theme.errorDim
 
-                        Text {
-                            id: ocrStatusLabel
+                        Row {
+                            id: ocrStatusRow
                             anchors.centerIn: parent
-                            text: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ?
-                                  "✓  Tesseract OCR Hazır" : "✕  Tesseract OCR Kurulu Değil"
-                            font.family: theme.fontFamily
-                            font.pointSize: 9
-                            font.bold: true
-                            color: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ? theme.success : theme.error
+                            spacing: 6
+
+                            Text {
+                                text: Icons.glyph((typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ? "check" : "cancel")
+                                font.family: Icons.FONT_FAMILY
+                                font.pointSize: 9
+                                color: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ? theme.success : theme.error
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ?
+                                      "Tesseract OCR Hazır" : "Tesseract OCR Kurulu Değil"
+                                font.family: theme.fontFamily
+                                font.pointSize: 9
+                                font.bold: true
+                                color: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ? theme.success : theme.error
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                     }
                 }

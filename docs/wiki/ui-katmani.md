@@ -1,152 +1,118 @@
 # UI Katmanı
 
-`ui/` — %100 PySide6, [[mimari]]'de tarif edilen backend/frontend
-ayrımının Qt'ye bağımlı yarısı.
+`ui_qml/` — Qt Quick (QML) arayüzü + PySide6 köprüsü, [[mimari]]'de
+tarif edilen backend/frontend ayrımının Qt'ye bağımlı yarısı. Eski
+PySide6-widgets tabanlı `ui/` katmanı tamamen kaldırıldı — bkz. [[log]].
 
-## `MainWindow` (`ui/main_window.py`)
+## `ui_qml/bridge/app_bridge.py` — `AppBridge`
 
-Composition root / controller. Sorumlulukları:
-- **Dependency composition**: `ConverterRegistry` oluşturur,
-  `core.converters.discovery.register_all()` ile otomatik doldurur,
-  `ui.converter_catalog.catalog_entries()` ile sıralı listeyi alır.
-- Pencere inşası (`_build_header/_build_body/_build_toolbar/_build_footer`).
-- Sinyal bağlama (`_connect_signals`).
-- Aktif converter durumu (`self._active_converter`) ve motor yönetimi
-  (`_populate_engines`, `_on_engine_changed` — `IEngineSelectable`
-  kontrolüyle, bkz. [[converter-arayuzu]]).
-- Dönüşüm başlatma/iptal (`_start_conversion` → `QtConversionRunner`).
-  Dönüştür butonu tek bir buton — `_on_convert_button_clicked()`
-  `self._converting` durumuna göre başlatma/iptal arasında dallanır
-  (ayrı bir iptal butonu yerine); `_set_converting_state()` metni ve
-  `objectName`'i (`primaryBtn` ↔ `dangerBtn`) değiştirir.
-  `QtConversionRunner.cancel()` çağrılır, `self._cancel_requested`
-  bayrağı `_on_batch_done()`'da "İptal edildi" durum mesajını üretmek
-  için kullanılır (worker'ın private durumuna reach-through yapılmaz).
-- Ayarları kalıcı saklama (`self._settings: AppSettings`) —
-  `_restore_settings()` (`__init__` sonrası, combo doldurulduktan sonra)
-  ve `closeEvent()` (kapanışta kaydeder).
-- Tema butonu (`_theme_btn`, header'da `🌙`/`☀️`) — `_on_theme_toggle_clicked()`
-  tercihi `AppSettings.save_theme_mode()` ile kaydeder ve **anında**
-  uygular: `ui/styles/theme.py`'deki `apply_theme()` çağrılır, dönen
-  QSS `QApplication.instance().setStyleSheet()` ile uygulanır
-  (bkz. `ui/styles/theme.py`). Duruma göre renklenen (başarı/hata/
-  uyarı) widget'lar ayrıca `_refresh_engine_display()` ve
-  `FileListWidget.retheme()` ile yeniden çizilir.
-- Birleştirme modu — `isinstance(active_converter, IMergeConverter)` ise
-  options panelindeki onay kutusu görünür olur. İşaretliyse
-  `_start_conversion()`, `start_batch_conversion()` yerine
-  `QtConversionRunner.start_merge_conversion()`'ı çağırır
-  (`self._last_conversion_was_merge` bayrağı, `_on_batch_done()`'ın
-  doğru durum mesajını seçmesi için — iptal mesajıyla karışmasın diye).
+Composition root / controller; `QObject` türevi, `Property`/`Signal`/
+`Slot` ile QML'e reaktif iki yönlü bağlanır. Sorumlulukları:
+- **Dependency composition**: `__init__()`'te `ConverterRegistry`
+  oluşturur, `core.converters.discovery.register_all()` ile doldurur.
+- **Kategorileme**: `_categorize_converter()` her converter'ı sınıf
+  adı/uzantı kuralıyla (`Compress`/`Split`/`Merge` sınıf adı içeriyor mu,
+  uzantı hangi grupta) bir kategoriye (`pdf_tools`/`images`/
+  `spreadsheets`/`documents`) ve bir **ikon key'ine** (bkz. aşağıdaki
+  "Merkezi İkon Mekanizması") atar — **kural tabanlı**, yeni bir
+  converter eklendiğinde elle güncellenmesi gerekmez (bkz.
+  [[converter-ekleme]]).
+- **Dönüşüm orkestrasyonu**: `startConversion()` → `QmlConversionWorker`
+  (normal, 1:N) veya `QmlMergeWorker` (birleştirme, N:1) — ikisi de
+  `core.conversion_facade`'i çağırır, sonuçları sinyallerle taşır.
+  `_set_status(message, kind)` — `statusMessage`/`statusKind`
+  property'lerini birlikte günceller (`kind`: `neutral`/`success`/
+  `warning`) — `FooterBar.qml` bunu renklendirmede kullanır, emoji
+  gerekmez.
+- **Ayarlar**: `QmlAppSettings` üzerinden tema/çıktı klasörü/kalite
+  ayarlarını kalıcı saklar.
 
-## `ui/converter_catalog.py`
-
-`registry.all_converters()`'dan dropdown listesini **jenerik** üretir.
-`_PREFERRED_ORDER` yalnızca görünüm sırası (bkz. [[converter-ekleme]]).
-Önceden bu işi `CONV_*` string sabitleri + elle yazılmış `addItem()`
-çağrıları + `conv_map` dict'i yapıyordu — hepsi kaldırıldı.
-
-## `ui/adapters/qt_conversion_runner.py`
-
-- `ConversionWorker(QThread)` + `QtConversionRunner.start_batch_conversion()` —
-  `converter.is_parallel_safe`'e göre `core.conversion_facade.convert_batch()`
-  (sıralı) veya `convert_batch_parallel()` (`ThreadPoolExecutor`) çağırır,
-  `progress`/`file_completed`/`batch_completed` sinyalleriyle UI thread'ine
-  rapor eder. Önceden `services/conversion_service.py` içindeydi —
-  backend/frontend ayrımını netleştirmek için buraya taşındı.
-- `MergeWorker(QThread)` + `QtConversionRunner.start_merge_conversion()` —
-  `core.conversion_facade.merge_files()`'ı çağırır, tek `ConversionResult`'ı
-  `BatchConversionResult(results=[result])`'a sararak `merge_completed`
-  sinyaliyle yayınlar (`SummaryDialog` değişmeden çalışır).
-  `cancel()` no-op'tur — birleştirme tek parça bir işlemdir, yarıda
-  kesilemez; `QtConversionRunner.cancel()`'ın worker türünden bağımsız
-  çağırdığı `.cancel()`'ın hata fırlatmamasını sağlar.
-
-## `ui/app_settings.py`
-
-`AppSettings` — `QSettings`'i sarmalar (pencere geometrisi, aktif
-converter kimliği `(source_ext, target_ext)`, çıktı klasörü, DPI/kalite/
-üzerine-yaz, tema tercihi). Tamamen UI-katmanına özel; `core/`'a sızmaz.
-`ORG_NAME`/`APP_NAME`/`THEME_MODE_KEY` modül sabitlerini de burada
-tanımlar — `main.py` (QApplication kurulumu) ve `ui/styles/theme.py`
-(tema tercihini `QApplication`'dan bağımsız okumak için) buradan alır,
-iki yerde ayrı hardcoded string yok. `OptionsPanelWidget`'ın
-`select_converter()`/`set_output_dir()`/`set_quality_options()` genel
-API'leriyle konuşur — `MainWindow` widget'ın private state'ine
-dokunmaz.
-
-## `ui/icon_map.py`
-
-Dosya uzantısından ikon yoluna eşleme (`icon_path_for()`). Önceden
-`FileItemWidget` her zaman `file_pptx.svg` gösteriyordu — artık kaynak
-uzantısına göre (`.pptx`, `.pdf`, `.jpg`/`.jpeg`) doğru ikon seçiliyor,
-bilinmeyen bir uzantı `file_generic.svg`'ye düşüyor (crash etmez, yeni
-converter eklerken özel ikon eklemek zorunlu değil).
-
-## `ui/file_discovery.py`
+## `ui_qml/bridge/file_discovery.py`
 
 `collect_files(directory, accepted_extensions) -> List[Path]` — saf
-`pathlib`/`rglob` mantığı, **Qt'den bağımsız** (`ui/icon_map.py`'nin de
-izlediği "UI-katmanında yaşayan ama Qt'siz saf mantık" deseni — bu
-yüzden `tests/`'teki hızlı, Qt'siz test paketine katılabiliyor).
-`DropZoneWidget.dropEvent()` bir klasör sürüklendiğinde bunu çağırır
-(alt klasörler dahil tarar); `dragEnterEvent()` de bir klasörü kabul
-edecek şekilde güncellendi.
+`pathlib`/`rglob` mantığı, Qt'den bağımsız (bu yüzden `tests/`'teki
+hızlı, Qt'siz test paketine katılabiliyor — `tests/test_file_discovery.py`).
+Eskiden `ui/file_discovery.py`'deydi, `ui/` kaldırılırken buraya taşındı.
 
-## Widget'lar (`ui/widgets/`)
+## `ui_qml/bridge/file_list_model.py` — `FileListModel`
 
-- `DropZoneWidget` — sürükle-bırak + tıkla-seç; `accepted_extensions`
-  listesini `set_accepted_extensions()` ile dinamik günceller. Bir
-  klasör sürüklendiğinde `ui/file_discovery.collect_files()` ile
-  içindeki (alt klasörler dahil) uygun dosyaları toplar.
-- `FileListWidget` / `FileItemWidget` — dosya listesi, durum ikonları
-  (`ui/icon_map.py` ile dosya türüne göre).
-- `OptionsPanelWidget` — dönüşüm türü/motor/çıktı klasörü/DPI/kalite
-  formu. `converter_type_changed` sinyali artık bir `IConverter` nesnesi
-  taşır (string değil). `select_converter()`/`set_output_dir()`/
-  `set_quality_options()` — `AppSettings` restore akışı için genel API.
-  `set_merge_mode_available()`/`is_merge_mode()` — birleştirme onay
-  kutusunu yönetir (bkz. [[converter-arayuzu]]'ndeki `IMergeConverter`).
+`QAbstractListModel` — dosya listesini QML `FileListView`'e sunar.
+`FileItem.icon_url` dosya uzantısına göre `assets/icons/`'tan bir
+ikon seçer (`_icon_url_for()`); `status_text` düz Türkçe metin döner
+("Tamam (2.3s)", "Hata") — başarı/hata rengi zaten `FileListView.qml`'deki
+durum rozetinin arka plan rengiyle taşınıyor, metne ayrıca sembol
+gömülmez.
 
-## `ui/dialogs/summary_dialog.py`
+## `ui_qml/bridge/app_settings.py` — `QmlAppSettings`
 
-Toplu dönüşüm bitince özet gösterir. `page_count > 1` olan sonuçlarda
-"(N sayfa)" ekler — çok sayfalı PDF→JPG çıktısı için.
+`QSettings`'i sarmalar (pencere geometrisi, çıktı klasörü, DPI/kalite/
+üzerine-yaz, tema tercihi). `ORG_NAME`/`APP_NAME` sabitlerini burada
+tanımlar — `main.py` buradan alır.
 
-## `ui/styles/theme.py`
+## Merkezi İkon Mekanizması (`ui_qml/qml/Icons.js`)
 
-`DARK_PALETTE`/`LIGHT_PALETTE` dict'leri + `build_style(palette) -> str`
-(parametrize edilmiş QSS üretimi). Modül **import edilir edilmez**
-(`QSettings(ORG_NAME, APP_NAME)` ile, `QApplication` gerektirmeden)
-kayıtlı tema tercihine göre `PALETTE` (bir **kopya** dict —
-`dict(LIGHT_PALETTE|DARK_PALETTE)`, sabitlerin kendisi değil) ve
-`MAIN_STYLE` seçilir.
+Önceden onlarca yerde ham emoji karakteri (⚡✅❌📁🔄☀️🌙✕✓⚠🔍⚙️ vb.)
+doğrudan `Text.text`'e veya bridge property'lerine gömülüydü — fonta/
+platforma göre tutarsız render eden renkli emoji. Bunun yerine
+Windows'un sistem fontu **Segoe Fluent Icons**'tan tek renkli glyph'ler
+kullanılıyor (uygulama zaten Windows-only — `pywin32`, hardcoded
+`C:\Program Files\...` yolları var, ek asset/bağımlılık gerekmez).
 
-**Canlı tema geçişi**: `apply_theme(mode) -> str` `PALETTE`'i **yerinde**
-günceller (`clear()` + `update()`) — nesne kimliği korunur, bu yüzden
-`from ui.styles.theme import PALETTE` yapan her dosya
-(`options_panel.py`, `file_list.py`, `drop_zone.py`,
-`summary_dialog.py`, `main_window.py`) Python'un modül önbelleği
-sayesinde aynı dict'e referans tutar ve çağrıdan hemen sonra güncel
-değerleri görür. `apply_theme()` yeni QSS'i de döner;
-`MainWindow._on_theme_toggle_clicked()` bunu
-`QApplication.instance().setStyleSheet()` ile uygular.
+`Icons.js` (`.pragma library`) `GLYPHS` adında bir key→codepoint
+tablosu ve `glyph(key)` fonksiyonu export eder. Python tarafı (`AppBridge`)
+asla codepoint bilmez — yalnızca semantik key string'i (`"convert"`,
+`"cancel"`, `"document"`, ...) üretir; hangi glyph'in hangi görsel
+şekle karşılık geldiğini yalnızca QML/`Icons.js` bilir — katmanlar
+arası sorumluluk ayrımı böyle korunur.
 
-Bu mekanizma sadece **statik** (tema dışında değişmeyen) stilleri
-kapsar — onlar merkezi QSS'e objectName selector'larıyla taşındı
-(`#sectionHeaderLabel`, `#sectionDivider`, `#formLabel`,
-`#dropZonePrimaryLabel`, `#dropZoneExtLabel`, `#fileNameLabel`,
-`#fileSizeLabel`, `#footerBar`, `#appTitle`, `#formatBadge`) —
-`setStyleSheet()` yeniden uygulandığında Qt bunları otomatik yeniden
-çizer. **Duruma göre renklenen** (başarı/hata/uyarı) birkaç widget hâlâ
-inline `setStyleSheet()` kullanıyor çünkü rengi hem temaya hem iş
-durumuna bağlı (`FileItemWidget._status_kind`, options panel/footer
-motor durumu); bunlar tema değiştiğinde `FileListWidget.retheme()` ve
-`MainWindow._refresh_engine_display()` ile son durumlarını güncel
-`PALETTE`'ten yeniden okuyarak boyanır. `summary_dialog.py` kalıcı açık
-kalmadığı için (her açılışta güncel `PALETTE`'i okur) hiç değişmedi.
+Kullanım deseni:
+```qml
+import "../Icons.js" as Icons
+Text { font.family: Icons.FONT_FAMILY; text: Icons.glyph("convert") }
+```
+
+`ui_qml/qml/components/ModernButton.qml`'e `iconGlyph: string`
+property'si eklendi (önceden bağlanmamış duran `iconSource` property'sinin
+yanına) — `text:` ile birlikte veya tek başına kullanılabilir, ikon+
+etiket arası boşluğu `Row.spacing` otomatik ayarlar (elle `"   "`
+boşluk dolgusu gerekmez). `ModernComboBox.qml`'in hem kapalı hem açık
+(popup) durumu, model item'ının `"icon"` alanı doluysa (converter
+kataloğu ve `AppBridge.engineList` bunu taşır) otomatik bir glyph
+gösterir.
+
+## Widget/Bileşenler (`ui_qml/qml/components/`)
+
+- `HeaderBar.qml` — logo, başlık, aktif format rozeti, sağda Ayarlar
+  (`settings`/`back` glyph) ve Tema (`theme_light`/`theme_dark` glyph)
+  butonları.
+- `CategorySidebar.qml` — arama kutusu (`search`/`cancel` glyph),
+  `bridge.categorizedConverters`'tan **jenerik** üretilen kategori
+  ağacı (kategori ve item ikonları `Icons.glyph(modelData.icon)`).
+- `MainCanvas.qml` / `OptionsCard.qml` — dönüşüm seçenekleri + büyük
+  CTA butonu (`bridge.isConverting`'e göre `convert`/`cancel` glyph +
+  "Dönüştür"/"İptal Et" metni).
+- `FileListView.qml` — dosya listesi, boş durum ikonu (`folder_open`),
+  satır-bazlı sil butonu (`cancel`).
+- `SettingsView.qml` — motor seçimi (`ModernComboBox` + `engineList`),
+  Tesseract OCR durum rozeti (`check`/`cancel` glyph + düz metin).
+- `SummaryModal.qml` — sonuç listesi (satır başına `check`/`cancel`
+  glyph, renk `theme.success`/`theme.error`), "Klasörü Aç" butonu
+  (`folder_open`).
+- `ModernButton.qml` / `ModernComboBox.qml` / `ModernCheckBox.qml` —
+  paylaşılan, tema-duyarlı temel bileşenler; `Icons.js` entegrasyonu
+  bunlarda merkezi.
+
+## `ui_qml/qml/Theme.qml`
+
+`QtObject` — açık/koyu palet renkleri, tipografi, radius sabitleri.
+`mode` property'si `bridge.themeMode`'dan okunur; `Main.qml`'de
+`id: theme` ile örneklenir, QML'in id-scope zinciri sayesinde tüm
+alt bileşenlerden (ayrı dosyalarda tanımlı olsalar bile) doğrudan
+`theme.xxx` ile erişilebilir.
 
 ## İlgili Sayfalar
 
 - [[mimari]] — bu katmanın genel akıştaki yeri
 - [[converter-arayuzu]] — `IEngineSelectable` kontrolünün dayandığı sözleşme
+- [[converter-ekleme]] — yeni converter eklerken `AppBridge`'e dokunulmaması
+- [[log]] — eski `ui/` katmanının kaldırılma kaydı

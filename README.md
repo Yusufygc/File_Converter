@@ -1,4 +1,4 @@
-# FileConvert Pro
+# FileConvert
 
 PySide6 ile yazılmış profesyonel dosya dönüştürücü uygulaması.
 
@@ -39,7 +39,7 @@ başlatmadan, milisaniyeler içinde çalışır.
 
 ## Proje Mimarisi
 
-Backend (`core/`) ve frontend (`ui/`) fiziksel olarak ayrılmıştır:
+Backend (`core/`) ve frontend (`ui_qml/`) fiziksel olarak ayrılmıştır:
 `core/` hiçbir Qt importu içermez, tak-çıkar (plug-in) bir converter
 mimarisi kullanır.
 
@@ -66,19 +66,18 @@ fileconverter/
 │
 ├── tests/                           # core/ için pytest testleri (Qt gerektirmez)
 │
-└── ui/                              # Frontend — %100 PySide6
-    ├── main_window.py               # MainWindow (Controller / Composition Root)
-    ├── converter_catalog.py         # registry'den dropdown listesini JENERİK üretir
-    ├── adapters/
-    │   └── qt_conversion_runner.py  # convert_batch()'i QThread içinde çalıştırır
-    ├── styles/
-    │   └── theme.py                 # Merkezi tema/renk sabitleri
-    ├── widgets/
-    │   ├── drop_zone.py             # Sürükle-bırak alanı
-    │   ├── file_list.py             # Dosya listesi + durum göstergesi
-    │   └── options_panel.py         # Seçenek paneli
-    └── dialogs/
-        └── summary_dialog.py        # Dönüşüm özet diyaloğu
+└── ui_qml/                          # Frontend — Qt Quick (QML) + PySide6 köprüsü
+    ├── bridge/
+    │   ├── app_bridge.py            # AppBridge (Controller / Composition Root)
+    │   ├── app_settings.py          # QmlAppSettings — QSettings sarmalayıcı
+    │   ├── conversion_worker.py     # QmlConversionWorker/QmlMergeWorker (QThread)
+    │   ├── file_list_model.py       # FileListModel (QAbstractListModel)
+    │   └── file_discovery.py        # collect_files() — saf pathlib, Qt'siz
+    └── qml/
+        ├── Main.qml                 # Kök pencere
+        ├── Theme.qml                # Açık/koyu tema renk sabitleri
+        ├── Icons.js                 # Merkezi ikon glyph tablosu
+        └── components/              # HeaderBar, CategorySidebar, MainCanvas, ...
 ```
 
 ---
@@ -88,7 +87,7 @@ fileconverter/
 | Prensip | Uygulama |
 |---------|----------|
 | **SRP** | `DropZoneWidget` yalnızca dosya alır, `BaseConverter` yalnızca ortak dönüşüm akışını yönetir, `QtConversionRunner` yalnızca Qt thread orkestrasyonundan sorumlu |
-| **OCP** | `IConverter`'ı implement eden yeni bir dosya `core/converters/`'a eklenir eklenmez `discovery.py` otomatik bulur ve kaydeder — mevcut kod (main_window, options_panel) değişmez |
+| **OCP** | `IConverter`'ı implement eden yeni bir dosya `core/converters/`'a eklenir eklenmez `discovery.py` otomatik bulur ve kaydeder — mevcut kod (`app_bridge.py`) değişmez |
 | **LSP** | Tüm `IConverter` implementasyonları aynı sözleşmeyle çalışır, birbirinin yerine geçebilir |
 | **ISP** | `IConverter`, `IConverterRegistry`, `IEngineSelectable` ayrı, küçük interface'ler — motor seçimi yalnızca ihtiyacı olan converter'ların implemente ettiği opsiyonel bir capability |
 | **DIP** | `QtConversionRunner` ve `convert_batch()`, somut converter sınıflarına değil `IConverter` soyutlamasına bağımlı |
@@ -98,7 +97,7 @@ fileconverter/
 ## Yeni Converter Ekleme
 
 Tek adım: `core/converters/` içine `BaseConverter`'ı implement eden bir
-dosya ekle. `main_window.py`/`options_panel.py`'ye dokunmaya gerek yok —
+dosya ekle. `ui_qml/bridge/app_bridge.py`'ye dokunmaya gerek yok —
 otomatik keşif (`discovery.py`) dropdown'da otomatik görünmesini sağlar.
 
 ```python

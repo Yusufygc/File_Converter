@@ -4,6 +4,48 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-24] [FIX] | PDF Böl: sayfa aralığı artık TEK PDF üretiyor
+
+Kullanıcı geri bildirimi: 2 PDF'i "1-3" aralığıyla bölünce 6 ayrı dosya
+(her sayfa kendi dosyasına) çıktı — beklenti aralığın **tek bir PDF**
+olarak birleştirilmesiydi. `PdfSplitConverter._do_convert()` artık
+`options.page_range` doluysa seçili sayfaları TEK bir `fitz.open()`
+belgesinde birleştirip `ad_sayfa1-2-3.pdf` gibi tek dosya üretiyor;
+aralık **boşsa** eski davranış (her sayfa ayrı dosya) korunuyor.
+`tests/test_pdf_split_converter.py`'deki ilgili testler yeni davranışa
+göre güncellendi. Detay: [[donusturucu-envanteri]].
+
+## [2026-09-24] [REFACTOR] | Emoji'ler kaldırıldı — Icons.js merkezi ikon mekanizması
+
+`ui_qml/` genelinde (Python bridge + QML) ⚡✅❌📁🔄☀️🌙✕✓⚠🔍⚙️🗜️✂️📑📝🖼️📊📄
+gibi ham emoji karakterleri kaldırıldı — platforma/fonta göre tutarsız
+render eden renkli emoji yerine `ui_qml/qml/Icons.js` (`.pragma library`)
+üzerinden Windows sistem fontu **Segoe Fluent Icons**'tan tek renkli
+glyph'ler kullanılıyor. `AppBridge` artık codepoint değil semantik ikon
+key'i üretiyor (`"convert"`, `"cancel"`, `"document"` vb.) — hangi
+glyph'in hangi şekle karşılık geldiğini yalnızca QML tarafı bilir.
+`ModernButton.qml`'e `iconGlyph` property'si, `ModernComboBox.qml`'e
+model item'ının `"icon"` alanından otomatik glyph render'ı eklendi.
+`AppBridge`'e `statusKind` property'si eklendi (`FooterBar.qml` artık
+✅/⚠ yerine rengiyle ayırt ediyor, `FileListView.qml`'deki durum
+rozeti deseniyle aynı fikir). Detay: [[ui-katmani]].
+
+## [2026-09-24] [REFACTOR] | Eski `ui/` (PySide6 widgets) katmanı kaldırıldı
+
+`main.py` uzun süredir `ui_qml/` (Qt Quick) üzerinden çalışıyordu;
+eski PySide6-widgets `ui/` katmanı "yedek" olarak duruyordu ama
+`ui_qml/bridge/app_bridge.py` hâlâ `ui/file_discovery.py`'yi import
+ediyordu — tam anlamıyla ölü kod değildi. `file_discovery.py`
+`ui_qml/bridge/file_discovery.py`'ye taşındı (`tests/test_file_discovery.py`
+import'u güncellendi), ardından `ui/` dizini komple silindi
+(`main_window.py`, `converter_catalog.py`, `app_settings.py`,
+`icon_map.py`, `adapters/`, `widgets/`, `dialogs/`, `styles/`).
+`docs/wiki/mimari.md`, `docs/wiki/ui-katmani.md`, `docs/wiki/rules.md`,
+`docs/wiki/converter-ekleme.md`, `docs/wiki/test-ve-bagimliliklar.md`,
+`docs/wiki/donusturucu-envanteri.md`, `README.md`, `CLAUDE.md` güncel
+mimariyi (`ui_qml/`) yansıtacak şekilde güncellendi. Test sayısı
+değişmedi (110), CI etkilenmedi. Detay: [[mimari]], [[ui-katmani]].
+
 ## [2026-09-16] [INGEST] | Akıllı PDF Analizi (PdfInspector) ve OCR Motoru Entegrasyonu
 
 Taranmış (görüntü tabanlı) ve dijital PDF'lerin dönüşüm kalitesini artırmak için

@@ -21,7 +21,12 @@ Rectangle {
             text: (typeof bridge !== "undefined" && bridge) ? bridge.statusMessage : "Hazır"
             font.family: theme.fontFamily
             font.pointSize: 9
-            color: theme.textSecondary
+            color: {
+                var kind = (typeof bridge !== "undefined" && bridge) ? bridge.statusKind : "neutral"
+                if (kind === "success") return theme.success
+                if (kind === "warning") return theme.warning
+                return theme.textSecondary
+            }
             anchors.verticalCenter: parent.verticalCenter
         }
     }

@@ -8,7 +8,7 @@ ApplicationWindow {
     id: window
 
     visible: true
-    title: "FileConvert Pro"
+    title: "FileConvert"
     minimumWidth: 960
     minimumHeight: 680
     width: 1100

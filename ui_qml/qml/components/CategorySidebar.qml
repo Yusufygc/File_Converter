@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../Icons.js" as Icons
 
 Rectangle {
     id: root
@@ -70,8 +71,10 @@ Rectangle {
                 spacing: 6
 
                 Text {
-                    text: "🔍"
+                    text: Icons.glyph("search")
+                    font.family: Icons.FONT_FAMILY
                     font.pixelSize: 12
+                    color: theme.textMuted
                     opacity: 0.6
                 }
 
@@ -99,7 +102,8 @@ Rectangle {
                 }
 
                 Text {
-                    text: "✕"
+                    text: Icons.glyph("cancel")
+                    font.family: Icons.FONT_FAMILY
                     font.pixelSize: 11
                     color: theme.textMuted
                     visible: searchInput.text.length > 0
@@ -189,18 +193,20 @@ Rectangle {
                                 spacing: 6
 
                                 Text {
-                                    text: modelData.icon || "📁"
+                                    text: Icons.glyph(modelData.icon || "document")
+                                    font.family: Icons.FONT_FAMILY
                                     font.pixelSize: 13
+                                    color: theme.textPrimary
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 Text {
                                     text: (modelData.title || "").toUpperCase()
                                     font.family: theme.fontFamily
-                                    font.pointSize: 8.5
-                                    font.bold: true
+                                    font.pointSize: 10
+                                    font.weight: Font.ExtraBold
                                     font.letterSpacing: 0.8
-                                    color: headerMouse.containsMouse ? theme.textPrimary : theme.textMuted
+                                    color: theme.textPrimary
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignVCenter
                                 }
@@ -293,8 +299,12 @@ Rectangle {
 
                                         // Format İkonu
                                         Text {
-                                            text: modelData.icon || "📄"
+                                            text: Icons.glyph(modelData.icon || "document")
+                                            font.family: Icons.FONT_FAMILY
                                             font.pixelSize: 14
+                                            color: itemBtn.isSelected ?
+                                                   (theme.isDark ? "#FFFFFF" : theme.accent) :
+                                                   theme.textPrimary
                                             Layout.alignment: Qt.AlignVCenter
                                         }
 

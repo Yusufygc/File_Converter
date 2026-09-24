@@ -1,7 +1,7 @@
-; Inno Setup 6 Script for FileConvert Pro
+; Inno Setup 6 Script for FileConvert
 ; =========================================
 
-#define MyAppName "FileConvert Pro"
+#define MyAppName "FileConvert"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Yusuf YGC"
 #define MyAppURL "https://github.com/Yusufygc/File_Converter"

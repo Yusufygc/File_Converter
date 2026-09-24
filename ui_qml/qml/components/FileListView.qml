@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../Icons.js" as Icons
 
 Rectangle {
     id: root
@@ -24,8 +25,10 @@ Rectangle {
             opacity: 0.5
 
             Text {
-                text: "📁"
+                text: Icons.glyph("folder_open")
+                font.family: Icons.FONT_FAMILY
                 font.pixelSize: 32
+                color: theme.textMuted
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
@@ -39,11 +42,54 @@ Rectangle {
         }
     }
 
+    // Dosya Sayacı — sol üst köşe, Temizle butonuyla aynı hizada
+    Text {
+        text: {
+            if (typeof bridge === "undefined" || !bridge || bridge.fileCount === 0) return ""
+            if (bridge.fileCount === 1) return "1 dosya eklendi"
+            return bridge.fileCount + " dosya eklendi"
+        }
+        font.family: theme.fontFamily
+        font.pointSize: 9.5
+        color: theme.textMuted
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.verticalCenter: clearBtn.verticalCenter
+        z: 2
+    }
+
+    // Temizle Butonu — sağ üst köşe
+    ModernButton {
+        id: clearBtn
+        iconGlyph: "cancel"
+        text: "Temizle"
+        variant: "danger"
+        pointSize: 9
+        implicitHeight: 28
+        visible: typeof bridge !== "undefined" && bridge && bridge.hasFiles
+        enabled: typeof bridge !== "undefined" && bridge && !bridge.isConverting
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 6
+        z: 2
+        onClicked: {
+            if (typeof bridge !== "undefined" && bridge) {
+                bridge.clearFiles()
+            }
+        }
+    }
+
     // Dosya Listesi
     ListView {
         id: listView
-        anchors.fill: parent
-        anchors.margins: 4
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.topMargin: clearBtn.visible ? clearBtn.implicitHeight + 12 : 4
+        anchors.leftMargin: 4
+        anchors.rightMargin: 4
+        anchors.bottomMargin: 4
         clip: true
         model: (typeof bridge !== "undefined" && bridge) ? bridge.fileListModel : null
         spacing: 4
@@ -139,7 +185,7 @@ Rectangle {
 
                 // Delete Single Row Button
                 ModernButton {
-                    text: "✕"
+                    iconGlyph: "cancel"
                     variant: "ghost"
                     pointSize: 9
                     implicitWidth: 26

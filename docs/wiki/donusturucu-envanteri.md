@@ -1,7 +1,7 @@
 # Dönüştürücü Envanteri
 
 `core/converters/` altında [[converter-ekleme]] tarafından otomatik
-keşfedilen 19 converter. Sıra, `ui/converter_catalog.py`'deki
+keşfedilen 19 converter. Sıra, `ui_qml/bridge/app_bridge.py`'deki
 `_PREFERRED_ORDER` ile aynı (varsayılan dropdown sırası). Üç converter
 (`PdfCompressConverter`, `PdfSplitConverter`, `PdfMergeConverter`) aynı
 `.pdf`→`.pdf` uzantı çiftini paylaşıyor — `ConverterRegistry`'nin iç
@@ -21,7 +21,7 @@ anahtarına sınıf adı eklenmesi bunların birbirini ezmesini önlüyor
 | `PdfToPngConverter` | `.pdf` → `.png` | PyMuPDF (`fitz`) | Paralel-güvenli | `PdfToJpgConverter` ile aynı rasterizasyon mantığı (çok sayfada `_p{n}` suffix); PNG kayıpsız olduğu için `options.quality` kullanılmaz |
 | `PdfToTxtConverter` | `.pdf` → `.txt` | PyMuPDF (`fitz`) + OCR (Tesseract) | Paralel-güvenli, OCR Destekli | Dijital PDF'lerde doğrudan metin çıkarımı; taranmış PDF'lerde OCR motoru varsa otomatik OCR ile metin çıkarır |
 | `PdfCompressConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli | Kaynak/hedef uzantı **aynı** — `get_output_path()` override edilir (`{stem}_sikistirilmis.pdf`), aksi halde varsayılan çıktı klasöründe kaynağın üzerine yazardı. Sayfaları görsele çevirmez, `doc.save(garbage=4, deflate=True, ...)` ile akış temizliği yapar |
-| `PdfSplitConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli, `IPageRangeSelectable` | Her sayfayı ayrı dosyaya böler: `ad_sayfa1.pdf, ad_sayfa2.pdf, ...` (tek sayfada bile — kaynakla çakışmayı önler). `options.page_range` ile "1-3,5,7-9" gibi bir aralık verilirse yalnızca o sayfalar, kaynaktaki gerçek sayfa numarasıyla adlandırılarak üretilir (bkz. [[converter-arayuzu]]) |
+| `PdfSplitConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Paralel-güvenli, `IPageRangeSelectable` | `options.page_range` boşsa her sayfayı ayrı dosyaya böler: `ad_sayfa1.pdf, ad_sayfa2.pdf, ...` (tek sayfada bile — kaynakla çakışmayı önler). Aralık verilirse ("1-3,5,7-9") o sayfalar **TEK bir PDF'te** birleştirilip `ad_sayfa1-2-3-5-7-8-9.pdf` gibi adlandırılır — kullanıcı bir aralık verdiğinde onu tek parça bekliyor, ayrıca her sayfayı bölmüyor (bkz. [[converter-arayuzu]]) |
 | `PdfMergeConverter` | `.pdf` → `.pdf` | PyMuPDF (`fitz`) | Birleştirme (`IMergeConverter`), Paralel-güvenli | Birden fazla PDF'i tek dosyada birleştirir; tek dosya modunda "birleştirme" kendisinin `{stem}_birlesik.pdf` kopyasını üretir (dejenere ama tutarlı) |
 | `XlsxToPdfConverter` | `.xlsx` → `.pdf` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |
 | `XlsxToCsvConverter` | `.xlsx` → `.csv` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |

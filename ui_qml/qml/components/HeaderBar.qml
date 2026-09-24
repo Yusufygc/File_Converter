@@ -33,7 +33,7 @@ Rectangle {
 
         // Title
         Text {
-            text: "FileConvert Pro"
+            text: "FileConvert"
             font.family: theme.fontFamily
             font.pointSize: 13
             font.bold: true
@@ -76,7 +76,7 @@ Rectangle {
             width: 36
             height: 36
             radius: 18
-            text: root.isSettingsPage ? "←" : "⚙️"
+            iconGlyph: root.isSettingsPage ? "back" : "settings"
             pointSize: root.isSettingsPage ? 14 : 12
             variant: root.isSettingsPage ? "secondary" : "ghost"
             onClicked: root.settingsToggleClicked()
@@ -91,7 +91,7 @@ Rectangle {
             width: 36
             height: 36
             radius: 18
-            text: theme.isDark ? "☀️" : "🌙"
+            iconGlyph: theme.isDark ? "theme_light" : "theme_dark"
             pointSize: 13
             variant: "ghost"
             onClicked: {

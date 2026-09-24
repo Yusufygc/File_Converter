@@ -35,9 +35,9 @@ from core.interfaces.engine_interface import IEngineSelectable
 from core.interfaces.merge_interface import IMergeConverter
 from core.interfaces.page_range_interface import IPageRangeSelectable
 from core.utils.resource_helper import get_resource_path
-from ui.file_discovery import collect_files
 from ui_qml.bridge.app_settings import QmlAppSettings
 from ui_qml.bridge.conversion_worker import QmlConversionWorker, QmlMergeWorker
+from ui_qml.bridge.file_discovery import collect_files
 from ui_qml.bridge.file_list_model import FileListModel
 
 
@@ -84,37 +84,37 @@ def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any
     if "Compress" in cls_name:
         cat_id = "pdf_tools"
         short_name = "PDF Sıkıştır"
-        icon = "🗜️"
+        icon = "compress"
         badge = "PDF"
     elif "Split" in cls_name:
         cat_id = "pdf_tools"
         short_name = "PDF Böl"
-        icon = "✂️"
+        icon = "split"
         badge = "PDF"
     elif "Merge" in cls_name:
         cat_id = "pdf_tools"
         short_name = "PDF Birleştir"
-        icon = "📑"
+        icon = "merge"
         badge = "PDF"
     elif s_ext == ".pdf" and t_ext == ".txt":
         cat_id = "pdf_tools"
         short_name = "PDF ➔ TXT"
-        icon = "📝"
+        icon = "note"
         badge = "TXT"
     elif s_ext in (".jpg", ".jpeg", ".png") or t_ext in (".jpg", ".jpeg", ".png"):
         cat_id = "images"
         short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "🖼️"
+        icon = "image"
         badge = t_ext.replace(".", "").upper()
     elif s_ext in (".xlsx", ".csv", ".ods") or t_ext in (".xlsx", ".csv", ".ods"):
         cat_id = "spreadsheets"
         short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "📊"
+        icon = "table"
         badge = t_ext.replace(".", "").upper()
     else:
         cat_id = "documents"
         short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "📄"
+        icon = "document"
         badge = t_ext.replace(".", "").upper()
 
     item_data = {
@@ -158,6 +158,7 @@ class AppBridge(QObject):
     isConvertingChanged = Signal(bool)
     progressChanged = Signal()
     statusMessageChanged = Signal(str)
+    statusKindChanged = Signal(str)
     summaryDataChanged = Signal()
     showSummaryModalChanged = Signal(bool)
     fileCountChanged = Signal()
@@ -191,6 +192,7 @@ class AppBridge(QObject):
         self._progress_val: int = 0
         self._progress_max: int = 0
         self._status_message: str = "Hazır"
+        self._status_kind: str = "neutral"  # neutral | success | warning
         self._cancel_requested: bool = False
         self._active_worker: Optional[Union[QmlConversionWorker, QmlMergeWorker]] = None
         self._last_was_merge: bool = False
@@ -264,10 +266,10 @@ class AppBridge(QObject):
     @Property(list, notify=convertersChanged)
     def categorizedConverters(self) -> List[Dict[str, Any]]:
         cats = {
-            "documents": {"id": "documents", "title": "Belgeler", "icon": "📄", "items": []},
-            "spreadsheets": {"id": "spreadsheets", "title": "Tablolar", "icon": "📊", "items": []},
-            "images": {"id": "images", "title": "Görseller", "icon": "🖼️", "items": []},
-            "pdf_tools": {"id": "pdf_tools", "title": "PDF Araçları", "icon": "⚡", "items": []},
+            "documents": {"id": "documents", "title": "Belgeler", "icon": "document", "items": []},
+            "spreadsheets": {"id": "spreadsheets", "title": "Tablolar", "icon": "table", "items": []},
+            "images": {"id": "images", "title": "Görseller", "icon": "image", "items": []},
+            "pdf_tools": {"id": "pdf_tools", "title": "PDF Araçları", "icon": "convert", "items": []},
         }
         for i, c in enumerate(self._converters):
             cat_id, item = _categorize_converter(c, i)
@@ -306,25 +308,28 @@ class AppBridge(QObject):
             return []
 
         available_engines = c.available_engines()
+        ms_available = ConversionEngine.MS_OFFICE in available_engines
+        lo_available = ConversionEngine.LIBREOFFICE in available_engines
         return [
             {
                 "id": "auto",
-                "name": "🔄  Otomatik (önerilen)",
+                "name": "Otomatik (önerilen)",
+                "icon": "refresh",
                 "available": True,
                 "engine": None,
             },
             {
                 "id": "msoffice",
-                "name": ("✅  Microsoft Office" if ConversionEngine.MS_OFFICE in available_engines
-                         else "❌  Microsoft Office (kurulu değil)"),
-                "available": ConversionEngine.MS_OFFICE in available_engines,
+                "name": "Microsoft Office" if ms_available else "Microsoft Office (kurulu değil)",
+                "icon": "check" if ms_available else "cancel",
+                "available": ms_available,
                 "engine": ConversionEngine.MS_OFFICE,
             },
             {
                 "id": "libreoffice",
-                "name": ("✅  LibreOffice" if ConversionEngine.LIBREOFFICE in available_engines
-                         else "❌  LibreOffice (kurulu değil)"),
-                "available": ConversionEngine.LIBREOFFICE in available_engines,
+                "name": "LibreOffice" if lo_available else "LibreOffice (kurulu değil)",
+                "icon": "check" if lo_available else "cancel",
+                "available": lo_available,
                 "engine": ConversionEngine.LIBREOFFICE,
             },
         ]
@@ -400,6 +405,10 @@ class AppBridge(QObject):
     @Property(str, notify=statusMessageChanged)
     def statusMessage(self) -> str:
         return self._status_message
+
+    @Property(str, notify=statusKindChanged)
+    def statusKind(self) -> str:
+        return self._status_kind
 
     @Property(dict, notify=summaryDataChanged)
     def summaryData(self) -> Dict[str, Any]:
@@ -631,9 +640,8 @@ class AppBridge(QObject):
         self._file_model.reset_statuses()
         self._progress_val = 0
         self._progress_max = len(files)
-        self._status_message = f"Dönüştürülüyor... 0/{len(files)}"
         self.progressChanged.emit()
-        self.statusMessageChanged.emit(self._status_message)
+        self._set_status(f"Dönüştürülüyor... 0/{len(files)}")
 
         self._last_was_merge = (
             self.isMergeMode and isinstance(self._active_converter, IMergeConverter)
@@ -652,20 +660,24 @@ class AppBridge(QObject):
             self._active_worker = worker
             worker.start()
 
+    def _set_status(self, message: str, kind: str = "neutral") -> None:
+        self._status_message = message
+        self._status_kind = kind
+        self.statusMessageChanged.emit(self._status_message)
+        self.statusKindChanged.emit(self._status_kind)
+
     @Slot()
     def cancelConversion(self) -> None:
         if self._is_converting and self._active_worker:
             self._cancel_requested = True
             self._active_worker.cancel()
-            self._status_message = "İptal ediliyor..."
-            self.statusMessageChanged.emit(self._status_message)
+            self._set_status("İptal ediliyor...")
 
     def _on_progress(self, completed: int, total: int) -> None:
         self._progress_val = completed
         self._progress_max = total
-        self._status_message = f"Dönüştürülüyor... {completed}/{total}"
         self.progressChanged.emit()
-        self.statusMessageChanged.emit(self._status_message)
+        self._set_status(f"Dönüştürülüyor... {completed}/{total}")
 
     def _on_file_done(self, result: ConversionResult) -> None:
         self._file_model.mark_result(result)
@@ -676,21 +688,19 @@ class AppBridge(QObject):
         self.progressChanged.emit()
 
         if self._last_was_merge:
-            status = (
-                "✅ Dosyalar tek çıktıda birleştirildi"
-                if batch.all_succeeded
-                else f"⚠ Birleştirme başarısız: {batch.results[0].error_message}"
-            )
+            if batch.all_succeeded:
+                status, kind = "Dosyalar tek çıktıda birleştirildi", "success"
+            else:
+                status, kind = f"Birleştirme başarısız: {batch.results[0].error_message}", "warning"
         elif self._cancel_requested:
             total_files = self._file_model.count()
-            status = f"⚠ İptal edildi — {batch.total}/{total_files} dosya işlendi"
+            status, kind = f"İptal edildi — {batch.total}/{total_files} dosya işlendi", "warning"
         elif batch.all_succeeded:
-            status = f"✅ {batch.success_count}/{batch.total} dosya başarıyla dönüştürüldü"
+            status, kind = f"{batch.success_count}/{batch.total} dosya başarıyla dönüştürüldü", "success"
         else:
-            status = f"⚠ {batch.success_count} başarılı, {batch.failure_count} hatalı"
+            status, kind = f"{batch.success_count} başarılı, {batch.failure_count} hatalı", "warning"
 
-        self._status_message = status
-        self.statusMessageChanged.emit(self._status_message)
+        self._set_status(status, kind)
 
         # SummaryModal verisi hazırla
         results_list = []

@@ -6,10 +6,12 @@ PyMuPDF (fitz) ile bir PDF'in sayfalarını ayrı PDF dosyalarına böler.
 mevcut "1 girdi → N çıktı" modeline (BaseConverter + ConvertOutcome)
 zaten oturuyor, `IMergeConverter` gerekmez.
 
-`options.page_range` boşsa tüm sayfalar bölünür (varsayılan, geriye
-dönük uyumlu). Doluysa (örn. "1-3,5,7-9") yalnızca belirtilen sayfalar
-— `IPageRangeSelectable.parse_page_range()` — kaynak içindeki gerçek
-sayfa numarasıyla adlandırılan ayrı dosyalara yazılır.
+`options.page_range` boşsa tüm sayfalar tek tek ayrı dosyalara bölünür
+(varsayılan, geriye dönük uyumlu — her sayfa kendi PDF'i). Doluysa
+(örn. "1-3,5,7-9") — `IPageRangeSelectable.parse_page_range()` —
+belirtilen sayfalar **TEK bir PDF'te** (verilen sırayla) birleştirilerek
+çıkarılır; kullanıcı bir aralık verdiğinde "bu aralığı tek parça olarak
+al" bekliyor, aralık içindeki her sayfayı ayrıca bölmek değil.
 
 SRP : Yalnızca PDF bölmeden sorumlu.
 """
@@ -96,12 +98,24 @@ class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
         doc = fitz.open(str(source_path))
         try:
             page_count = doc.page_count
-            pages = (
-                self.parse_page_range(options.page_range, page_count)
-                if options.page_range
-                else list(range(1, page_count + 1))
-            )
 
+            if options.page_range:
+                # Aralık verildiğinde seçili sayfalar TEK bir PDF'te birleştirilir.
+                pages = self.parse_page_range(options.page_range, page_count)
+                range_output = output_path.with_name(
+                    f"{source_path.stem}_sayfa{'-'.join(str(p) for p in pages)}.pdf"
+                )
+                range_doc = fitz.open()
+                try:
+                    for page_num in pages:
+                        range_doc.insert_pdf(doc, from_page=page_num - 1, to_page=page_num - 1)
+                    range_doc.save(str(range_output))
+                finally:
+                    range_doc.close()
+                return ConvertOutcome(output_path=range_output, page_count=len(pages))
+
+            # Aralık verilmediyse her sayfa kendi ayrı dosyasına bölünür.
+            pages = list(range(1, page_count + 1))
             first_output = output_path
             for idx, page_num in enumerate(pages):
                 page_output = output_path.with_name(f"{source_path.stem}_sayfa{page_num}.pdf")

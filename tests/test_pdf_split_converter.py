@@ -53,7 +53,7 @@ def test_validate_rejects_non_pdf(tmp_path):
     assert conv.validate(txt) is False
 
 
-def test_page_range_splits_only_selected_pages(tmp_path):
+def test_page_range_combines_selected_pages_into_one_file(tmp_path):
     pdf = tmp_path / "belge.pdf"
     _make_pdf(pdf, page_count=5)
     conv = PdfSplitConverter()
@@ -64,9 +64,13 @@ def test_page_range_splits_only_selected_pages(tmp_path):
 
     assert result.success is True
     assert result.page_count == 3
-    for i in (1, 2, 4):
-        assert (tmp_path / f"belge_sayfa{i}.pdf").exists()
-    for i in (3, 5):
+    assert result.output_path == tmp_path / "belge_sayfa1-2-4.pdf"
+    assert result.output_path.exists()
+    d = fitz.open(str(result.output_path))
+    assert d.page_count == 3
+    d.close()
+    # Aralık dışındaki/tekil sayfa dosyaları oluşturulmaz — tek çıktı var.
+    for i in (1, 2, 3, 4, 5):
         assert not (tmp_path / f"belge_sayfa{i}.pdf").exists()
 
 

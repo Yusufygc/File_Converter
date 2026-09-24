@@ -2,8 +2,7 @@
 
 Bu proje tak-çıkar (plug-in) mimariye sahiptir: yeni bir dönüşüm türü
 eklemenin **tek adımı**, `core/converters/` içine bir dosya eklemektir.
-`ui/main_window.py` ve `ui/widgets/options_panel.py`'ye **dokunulmaz** —
-bkz. [[mimari]].
+`ui_qml/bridge/app_bridge.py`'ye **dokunulmaz** — bkz. [[mimari]].
 
 ## Adımlar
 
@@ -38,17 +37,20 @@ class DocxToPdfConverter(BaseConverter):
 
 2. Bu kadar. `core/converters/discovery.py`, paketi `pkgutil` ile tarar,
    somut (abstract olmayan) `IConverter` alt sınıflarını bulur,
-   `MainWindow.__init__()`'te otomatik `registry`'ye kaydeder.
-3. `ui/converter_catalog.py`, `registry.all_converters()`'dan dropdown
-   listesini üretir — yeni converter otomatik görünür.
+   `AppBridge.__init__()`'te (`ui_qml/bridge/app_bridge.py`) otomatik
+   `registry`'ye kaydeder.
+3. `AppBridge.converters`/`categorizedConverters` property'leri
+   `registry.all_converters()`'dan QML için listeyi üretir — yeni
+   converter otomatik görünür, `_categorize_converter()` sınıf adı/
+   uzantısına bakarak otomatik bir kategori+ikon atar.
 
 ## Görünüm Sırası (opsiyonel)
 
-Dropdown'daki sıra `ui/converter_catalog.py`'deki `_PREFERRED_ORDER`
-listesinden gelir. Bu **fonksiyonel bir gereklilik değildir** —
-listede olmayan bir converter alfabetik olarak sona eklenir, yani bu
-adımı atlasan da converter doğru çalışır, yalnızca dropdown'da en sonda
-görünür. İstersen `(source_ext, target_ext)` çiftini oraya da ekleyebilirsin.
+Sıra `app_bridge.py`'deki `_PREFERRED_ORDER` listesinden gelir. Bu
+**fonksiyonel bir gereklilik değildir** — listede olmayan bir converter
+alfabetik olarak sona eklenir, yani bu adımı atlasan da converter doğru
+çalışır, yalnızca dropdown'da en sonda görünür. İstersen
+`(source_ext, target_ext)` çiftini oraya da ekleyebilirsin.
 
 ## Birden Fazla Motor Gerekiyorsa
 

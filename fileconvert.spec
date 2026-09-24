@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller Spec — FileConvert Pro
+PyInstaller Spec — FileConvert
 ====================================
 Build: pyinstaller fileconvert.spec
 Çıktı: dist/FileConvertPro/FileConvertPro.exe

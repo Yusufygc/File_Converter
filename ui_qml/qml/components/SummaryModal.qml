@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../Icons.js" as Icons
 
 Item {
     id: root
@@ -64,7 +65,7 @@ Item {
                 }
 
                 ModernButton {
-                    text: "✕"
+                    iconGlyph: "cancel"
                     variant: "ghost"
                     pointSize: 11
                     implicitWidth: 32
@@ -216,8 +217,10 @@ Item {
                             spacing: 8
 
                             Text {
-                                text: modelData.success ? "✅" : "❌"
+                                text: Icons.glyph(modelData.success ? "check" : "cancel")
+                                font.family: Icons.FONT_FAMILY
                                 font.pixelSize: 12
+                                color: modelData.success ? theme.success : theme.error
                             }
 
                             Text {
@@ -251,7 +254,8 @@ Item {
                 spacing: 12
 
                 ModernButton {
-                    text: "📁   Klasörü Aç"
+                    iconGlyph: "folder_open"
+                    text: "Klasörü Aç"
                     variant: "secondary"
                     pointSize: 10
                     implicitHeight: 40

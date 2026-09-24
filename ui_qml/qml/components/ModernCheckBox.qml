@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import "../Icons.js" as Icons
 
 CheckBox {
     id: control
@@ -20,7 +21,8 @@ CheckBox {
 
         Text {
             anchors.centerIn: parent
-            text: "✓"
+            text: Icons.glyph("check")
+            font.family: Icons.FONT_FAMILY
             font.pixelSize: 12
             font.bold: true
             color: "#FFFFFF"

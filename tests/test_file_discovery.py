@@ -1,4 +1,4 @@
-from ui.file_discovery import collect_files
+from ui_qml.bridge.file_discovery import collect_files
 
 
 def test_collects_matching_files_recursively(tmp_path):

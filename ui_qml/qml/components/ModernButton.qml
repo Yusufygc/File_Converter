@@ -1,11 +1,13 @@
 import QtQuick
 import QtQuick.Controls
+import "../Icons.js" as Icons
 
 Item {
     id: root
 
     property string text: ""
     property string iconSource: ""
+    property string iconGlyph: ""
     property string variant: "secondary" // primary | secondary | danger | ghost | accent_outline
     property bool enabled: true
     property real pointSize: 11
@@ -82,7 +84,18 @@ Item {
         }
 
         Text {
+            id: glyphIcon
+            visible: root.iconGlyph !== ""
+            text: Icons.glyph(root.iconGlyph)
+            font.family: Icons.FONT_FAMILY
+            font.pointSize: root.pointSize + 1
+            anchors.verticalCenter: parent.verticalCenter
+            color: label.color
+        }
+
+        Text {
             id: label
+            visible: root.text !== ""
             text: root.text
             font.family: theme.fontFamily
             font.pointSize: root.pointSize

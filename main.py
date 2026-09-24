@@ -1,5 +1,5 @@
 """
-FileConvert Pro — Giriş Noktası (QML Sürümü)
+FileConvert — Giriş Noktası (QML Sürümü)
 ============================================
 PySide6 QML motorunu başlatır, AppBridge köprüsünü QML context'ine bağlar.
 Eski UI dosyaları yedek olarak ui/ altında korunmuştur.

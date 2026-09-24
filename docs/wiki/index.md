@@ -1,4 +1,4 @@
-# FileConvert Pro — Wiki İndeksi
+# FileConvert — Wiki İndeksi
 
 PySide6 tabanlı masaüstü dosya dönüştürücü uygulamasının bilgi tabanı.
 Kod yazmadan veya mimari bir karar vermeden önce bu sayfa okunur —

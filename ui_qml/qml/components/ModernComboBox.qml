@@ -1,11 +1,16 @@
 import QtQuick
 import QtQuick.Controls
+import "../Icons.js" as Icons
 
 ComboBox {
     id: control
 
     property string textRoleKey: "displayName"
     property string valueRoleKey: "id"
+
+    function iconFor(item) {
+        return (item && item.icon !== undefined) ? item.icon : ""
+    }
 
     font.family: theme.fontFamily
     font.pointSize: 10
@@ -32,25 +37,53 @@ ComboBox {
         return control.currentText || ""
     }
 
+    property string currentIcon: {
+        if (currentIndex < 0 || !model) return ""
+        var item = null
+        if (Array.isArray(model)) {
+            item = model[currentIndex]
+        } else if (typeof model.get === "function") {
+            item = model.get(currentIndex)
+        }
+        return control.iconFor(item)
+    }
+
     delegate: ItemDelegate {
         id: itemDel
         width: control.popup.width
         implicitHeight: 36
         padding: 8
 
-        contentItem: Text {
-            text: {
-                if (typeof modelData === "string") return modelData
-                if (modelData && modelData[control.textRoleKey] !== undefined) return modelData[control.textRoleKey]
-                if (modelData && modelData.displayName !== undefined) return modelData.displayName
-                if (modelData && modelData.name !== undefined) return modelData.name
-                return ""
+        contentItem: Item {
+            Text {
+                id: itemIconText
+                visible: text !== ""
+                text: Icons.glyph(control.iconFor(modelData))
+                font.family: Icons.FONT_FAMILY
+                font.pointSize: 10
+                color: itemDel.hovered ? theme.accent : theme.textPrimary
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
             }
-            color: itemDel.hovered ? theme.accent : theme.textPrimary
-            font.family: theme.fontFamily
-            font.pointSize: 10
-            elide: Text.ElideRight
-            verticalAlignment: Text.AlignVCenter
+
+            Text {
+                text: {
+                    if (typeof modelData === "string") return modelData
+                    if (modelData && modelData[control.textRoleKey] !== undefined) return modelData[control.textRoleKey]
+                    if (modelData && modelData.displayName !== undefined) return modelData.displayName
+                    if (modelData && modelData.name !== undefined) return modelData.name
+                    return ""
+                }
+                color: itemDel.hovered ? theme.accent : theme.textPrimary
+                font.family: theme.fontFamily
+                font.pointSize: 10
+                elide: Text.ElideRight
+                verticalAlignment: Text.AlignVCenter
+                anchors.left: itemIconText.visible ? itemIconText.right : parent.left
+                anchors.leftMargin: itemIconText.visible ? 8 : 0
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
         background: Rectangle {
@@ -83,14 +116,31 @@ ComboBox {
         }
     }
 
-    contentItem: Text {
-        leftPadding: 12
-        rightPadding: control.indicator.width + 18
-        text: control.displayText
-        font: control.font
-        color: theme.textPrimary
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
+    contentItem: Item {
+        Text {
+            id: currentIconText
+            visible: text !== ""
+            text: Icons.glyph(control.currentIcon)
+            font.family: Icons.FONT_FAMILY
+            font.pointSize: control.font.pointSize
+            color: theme.textPrimary
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Text {
+            text: control.displayText
+            font: control.font
+            color: theme.textPrimary
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            anchors.left: currentIconText.visible ? currentIconText.right : parent.left
+            anchors.leftMargin: currentIconText.visible ? 8 : 12
+            anchors.right: parent.right
+            anchors.rightMargin: control.indicator.width + 18
+            anchors.verticalCenter: parent.verticalCenter
+        }
     }
 
     background: Rectangle {

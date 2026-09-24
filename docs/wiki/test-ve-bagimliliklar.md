@@ -38,7 +38,7 @@ python -m pytest tests/ -v
   `is_available`, `unavailable_hint`) — gerçek dönüşüm testi yok
   (`PdfToDocxConverter`/`PdfToOdtConverter` için de yok, CI'da
   LibreOffice garantili değil).
-- `tests/test_file_discovery.py` — `ui/file_discovery.collect_files()`'ı
+- `tests/test_file_discovery.py` — `ui_qml/bridge/file_discovery.collect_files()`'ı
   (Qt'siz, saf pathlib mantığı) iç içe klasör yapısıyla test eder.
 - `tests/test_pdf_merge_converter.py`, `tests/test_pdf_split_converter.py`,
   `tests/test_jpg_to_pdf_converter.py` — gerçek PyMuPDF ile; birleştirme
@@ -90,6 +90,16 @@ pip install -r requirements-dev.txt    # geliştirmek/test için
   converter kullanıcıya kurulum linki gösterir (bkz. [[libreoffice-motoru]]).
 - **Microsoft Office** — yalnızca Windows'ta, `pywin32` üzerinden
   PPTX→PDF'te tercih edilen motor; kurulu değilse otomatik LibreOffice'e düşer.
+- **Tesseract OCR** — taranmış (görüntü tabanlı) PDF'lerden metin
+  çıkarımı için (`core/converters/ocr_engine.py`, bkz. [[log]]).
+  `pytesseract` (pip) yalnızca sarmalayıcı — gerçek motor `winget install
+  --id UB-Mannheim.TesseractOCR -e` ile sistem geneline kurulur.
+  `OcrEngine._find_tesseract_binary()` önce `PATH`'te (`shutil.which`),
+  bulamazsa `C:\Program Files\Tesseract-OCR\tesseract.exe` gibi bilinen
+  yollarda arar; kurulu değilse `is_available()` `False` döner,
+  `PdfToDocxConverter`/`PdfToTxtConverter` OCR'siz (görsel gömme/motor
+  hatası) yoluna düşer. Türkçe dil paketi (`tur.traineddata`) varsayılan
+  kurulumda **gelmez** — eklenmezse `OcrEngine` otomatik `eng`'e düşer.
 
 PyMuPDF ve pdf2docx saf Python paketleri olduğu için harici kurulum
 gerektirmez — `pip install`'la gelir.
