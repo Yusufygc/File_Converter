@@ -4,6 +4,37 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-24] [FIX] | Kurulu exe'de sadece PPTX→PDF + açılışta cmd pencereleri
+
+Kurulumdan sonra iki sorun: (1) yalnızca PPTX→PDF görünüyordu — `core/`
+paketlerinde `__init__.py` yoktu (namespace package), PyInstaller'ın
+`collect_submodules('core')`'u alt modülleri bulamadı, exe'ye 17 converter
+modülünden sadece doğrudan import edilen `pptx_to_pdf` girdi.
+`discovery.py`'deki statik fallback listesi var olmayan modül adları
+içeriyor ve import hatalarını yutuyordu, sorunu gizledi — kaldırıldı.
+`__init__.py`'ler eklendi, `tests/test_packaging.py` ile regresyon
+testi yazıldı; paketlenmiş ortamda 19 converter doğrulandı.
+(2) Açılışta cmd pencereleri: `pytesseract.get_tesseract_version()`
+subprocess'i pencereyi gizlemeden açıyor, `AppBridge.isOcrAvailable`
+her okunuşta yeni `OcrEngine` oluşturduğu için birkaç kez çağrılıyordu.
+`ocr_engine.py` artık kendi `tesseract --version` yoklamasını
+`CREATE_NO_WINDOW` ile yapıyor, sonuç modül seviyesinde
+(`functools.lru_cache`) cmd başına bir kez hesaplanıyor.
+`libreoffice_engine.py`'ye de aynı bayrak eklendi. A/B ölçümü: bayraksız
+3 çağrı 6 görünür pencere, bayraklı 0. Detay: [[paketleme]].
+
+## [2026-09-24] [FIX] | Exe Defender tarafından virüs sanılıyordu + Inno Setup sihirbazı
+
+PyInstaller 6.11.1 ile üretilen exe Defender tarafından karantinaya
+alınıyor/çalıştırılması engelleniyordu. Kök neden eski bootloader;
+diğer projelerde kullanılan 6.22.3'e yükseltilince exclusion dışında
+taramada tehdit bulunmadı. Exe'ye `version_info.txt` ile sürüm bilgisi
+eklendi, `FileConvertPro` adı `FileConvert` oldu, spec'teki gerçekte
+kurulu olmayan `openpyxl`/`odf` hidden import'ları silindi.
+`installer/setup.iss`: Program Files'a yönetici kurulumu, varsayılan
+işaretli masaüstü kısayolu, isteğe bağlı Tesseract OCR indirme+sessiz
+kurulum (NSIS → `/S`) + Türkçe dil paketi. Detay: [[paketleme]].
+
 ## [2026-09-24] [FIX] | Converter seçiminde donma — OcrEngine.is_available() cache'lenmedi
 
 Kullanıcı raporu: "PDF → DOCX"/"PDF → TXT" seçilince kısa bir donma/

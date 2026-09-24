@@ -20,6 +20,12 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
   elle kayıt/dropdown-item eklenmez — `discovery.py` ve
   `AppBridge._categorize_converter()`'ın kural-tabanlı (sınıf adı/uzantı)
   kategorilendirmesi üzerinden otomatik.
+- `core/` altındaki her klasörde `__init__.py` bulunur (normal paket).
+  Olmazsa PyInstaller dinamik keşfedilen converter'ları paketlemez —
+  bkz. [[paketleme]], `tests/test_packaging.py`.
+- Konsol programı başlatan her `subprocess` çağrısı
+  `creationflags=CREATE_NO_WINDOW` kullanır; aksi halde konsolsuz exe'de
+  cmd pencereleri yanıp söner — bkz. [[paketleme]].
 - Yeni converter, `IConverter`'ı doğrudan implemente etmek yerine
   `BaseConverter`'dan türetilir (bkz. [[converter-arayuzu]]) — ortak
   validate/timing/hata-sarmalama mantığı tekrar yazılmaz.

@@ -61,7 +61,14 @@ class LibreOfficeEngine:
             str(source_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        # Konsolsuz exe'de soffice.com gibi konsol başlatıcılar cmd penceresi açmasın.
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
 
         if result.returncode != 0:
             raise RuntimeError(

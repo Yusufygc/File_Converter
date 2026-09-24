@@ -55,6 +55,10 @@ python -m pytest tests/ -v
   `is_parallel_safe=False`) — `test_docx_to_pdf_converter.py`'deki
   "gerçek dönüşüm testi yok" prensibiyle aynı.
 
+- `tests/test_packaging.py` — `core/` altındaki her klasörün
+  `__init__.py` içerdiğini ve PyInstaller'ın `collect_submodules('core.converters')`'ının
+  diskteki her converter modülünü bulduğunu doğrular (bkz. [[paketleme]]).
+
 `conftest.py` (proje kökü), `pytest`'in çağırılma biçiminden bağımsız
 olarak proje kökünü `sys.path`'e ekler.
 

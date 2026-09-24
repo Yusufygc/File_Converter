@@ -10,9 +10,63 @@ pip install -r requirements-dev.txt   # pyinstaller dahil
 pyinstaller fileconvert.spec
 ```
 
-Çıktı: `dist/FileConvertPro/FileConvertPro.exe` (+ `_internal/` klasörü,
-tüm bağımlılıkları içerir, ~130MB). `build/` ve `dist/` `.gitignore`'da
-zaten hariç tutulmuş durumda.
+Çıktı: `dist/FileConvert/FileConvert.exe` (+ `_internal/` klasörü,
+tüm bağımlılıkları içerir). `build/` ve `dist/` `.gitignore`'da
+zaten hariç tutulmuş durumda. Exe'ye `version_info.txt` üzerinden
+Windows sürüm bilgisi (şirket, ürün adı, sürüm) gömülür.
+
+## Antivirüs Yanlış Pozitifi — PyInstaller Sürümü
+
+`requirements-dev.txt` eskiden `pyinstaller==6.11.1`'e sabitliydi. Bu
+sürümün bootloader'ı zamanla zararlı yazılımlarda da kullanıldığı için
+Windows Defender imza/ML modellerine girmiş: üretilen exe derlenir
+derlenmez karantinaya alınıyor, çalıştırılınca "Dosya virüslü..." hatası
+veriyordu. Diğer projelerde kullanılan **6.22.3**'e yükseltilince,
+exclusion olmayan bir klasörde `MpCmdRun -Scan` "found no threats"
+verdi ve exe sorunsuz çalıştı. **Kural:** Defender exclusion eklemek
+çözüm değildir (son kullanıcıya "güvenliği kapat" denemez) —
+bootloader'ı güncel tut. Kalıcı çözüm Authenticode kod imzalamadır
+(imzasız kurulumlar ilk indirmede SmartScreen "Windows bilgisayarınızı
+korudu" uyarısı gösterebilir; bu antivirüs tespiti değil, itibar
+kontrolüdür).
+
+## `core/` Paketleri Normal Paket Olmalı (`__init__.py`)
+
+Converter'lar `pkgutil` ile **dinamik** keşfedildiği için PyInstaller
+onları statik analizle göremez; `.spec`'teki `collect_submodules('core')`
+ile toplanırlar. `core/` ve alt klasörlerinde `__init__.py` yokken
+(namespace package) `collect_submodules` alt modülleri listeleyemedi:
+exe'ye yalnızca kodda doğrudan import edilen modüller girdi, kurulu
+uygulamada sadece PPTX→PDF görünüyordu. Yeni bir `core/` alt klasörü
+açılırsa `__init__.py` eklenmeli — `tests/test_packaging.py` bunu ve
+`collect_submodules('core.converters')`'ın diskteki her modülü
+bulduğunu doğrular.
+
+## Konsol Penceresi Açılmaması (`CREATE_NO_WINDOW`)
+
+Exe konsolsuz (`console=False`) derleniyor; buradan başlatılan konsol
+programları (`tesseract.exe`, `soffice.com`) bayrak verilmezse her
+çağrıda görünür bir cmd penceresi açıp kapatır. Bu yüzden
+`subprocess` çağrıları `creationflags=CREATE_NO_WINDOW` kullanır
+(`ocr_engine.py`, `libreoffice_engine.py`). `pytesseract.get_tesseract_version()`
+bu bayrağı vermediği ve sonucu cache'lemediği için kullanılmıyor.
+
+## Kurulum Sihirbazı (Inno Setup)
+
+`installer/setup.iss` → `ISCC.exe setup.iss` →
+`dist/installer/FileConvert_Setup_v1.0.0.exe`. Önce PyInstaller build'i
+alınmış olmalı (`dist/FileConvert/`'u paketler).
+
+- Yönetici hakkıyla **Program Files**'a kurar (`PrivilegesRequired=admin`).
+- Masaüstü kısayolu görevi varsayılan olarak işaretli.
+- **Tesseract OCR** isteğe bağlı görev olarak sunulur (varsayılan
+  işaretsiz, ne işe yaradığı açıklamada yazılı). Seçilirse kurulum
+  sonunda UB-Mannheim NSIS kurulumunu PowerShell `Invoke-WebRequest`
+  ile indirip **`/S`** ile sessiz kurar (NSIS olduğu için Inno'nun
+  `/VERYSILENT`'ı çalışmaz — pencere gizli açılıp kurulum asılı kalır),
+  ardından `tur.traineddata`'yı `tessdata/`'ya indirir. Tesseract zaten
+  kuruluysa adım atlanır; indirme/kurulum başarısız olursa kullanıcıya
+  bilgi verilir ama FileConvert kurulumu iptal edilmez (OCR opsiyonel).
 
 ## Neden `--onedir` (`--onefile` değil)
 

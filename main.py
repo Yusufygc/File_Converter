@@ -2,7 +2,6 @@
 FileConvert — Giriş Noktası (QML Sürümü)
 ============================================
 PySide6 QML motorunu başlatır, AppBridge köprüsünü QML context'ine bağlar.
-Eski UI dosyaları yedek olarak ui/ altında korunmuştur.
 """
 
 import os
@@ -38,7 +37,7 @@ def main() -> int:
     if sys.platform == "win32":
         try:
             import ctypes
-            myappid = "yusufygc.fileconvertpro.app.1.0.0"
+            myappid = "yusufygc.fileconvert.app.1.0.0"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         except Exception:
             pass

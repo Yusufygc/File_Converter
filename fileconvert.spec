@@ -3,7 +3,7 @@
 PyInstaller Spec — FileConvert
 ====================================
 Build: pyinstaller fileconvert.spec
-Çıktı: dist/FileConvertPro/FileConvertPro.exe
+Çıktı: dist/FileConvert/FileConvert.exe
 """
 
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
@@ -26,8 +26,6 @@ hiddenimports = [
     'docx',
     'pytesseract',
     'PIL',
-    'openpyxl',
-    'odf',
     'PySide6.QtQuick',
     'PySide6.QtQml',
     'PySide6.QtCore',
@@ -63,13 +61,14 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='FileConvertPro',
+    name='FileConvert',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
     icon='assets/icons/app_icon.ico',
+    version='version_info.txt',
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -85,5 +84,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='FileConvertPro',
+    name='FileConvert',
 )

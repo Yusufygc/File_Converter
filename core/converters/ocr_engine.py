@@ -8,9 +8,11 @@ Framework-agnostic (Qt bağımlılığı yoktur).
 
 from __future__ import annotations
 
+import functools
 import io
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import List, Optional
 
@@ -23,6 +25,33 @@ _COMMON_TESSERACT_PATHS = [
     r"C:\tools\tesseract\tesseract.exe",
 ]
 
+# Konsolsuz (PyInstaller windowed) exe'den başlatılan konsol programları
+# aksi halde her çağrıda görünür bir cmd penceresi açıp kapatır.
+NO_WINDOW_FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+@functools.lru_cache(maxsize=None)
+def _probe_tesseract(tesseract_cmd: str) -> bool:
+    """
+    `tesseract --version` ile binary'nin çalıştığını doğrular; süreç başına
+    bir kez (cmd başına) çalışır. `pytesseract.get_tesseract_version()`
+    kullanılmıyor: pencereyi gizlemeden subprocess açıyor ve cache'lemiyor —
+    converter seçimlerinde UI donması ve açılışta cmd pencereleri yaratıyordu.
+    """
+    try:
+        import pytesseract  # noqa: F401
+        from PIL import Image  # noqa: F401
+        result = subprocess.run(
+            [tesseract_cmd, "--version"],
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            timeout=15,
+            creationflags=NO_WINDOW_FLAGS,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
 
 class OcrEngine:
     """Tesseract OCR işlemlerini yöneten motor."""
@@ -30,36 +59,16 @@ class OcrEngine:
     def __init__(self, preferred_lang: str = "tur+eng"):
         self._preferred_lang = preferred_lang
         self._tesseract_cmd: Optional[str] = self._find_tesseract_binary()
-        self._available_cache: Optional[bool] = None
 
     # ------------------------------------------------------------------ #
     #  Durum & Keşif                                                      #
     # ------------------------------------------------------------------ #
 
     def is_available(self) -> bool:
-        """
-        Sistemde Tesseract binary ve pytesseract'in hazır olup olmadığını kontrol eder.
-        Sonuç instance ömrü boyunca cache'lenir — `pytesseract.get_tesseract_version()`
-        her çağrıda bir `tesseract.exe --version` subprocess'i başlatıyor; bu property
-        UI tarafından converter seçimi gibi sık tetiklenen olaylarda tekrar tekrar
-        okunuyor, cache'siz hali gözle görülür donmaya yol açıyordu.
-        """
-        if self._available_cache is not None:
-            return self._available_cache
-
+        """Sistemde Tesseract binary ve pytesseract'in hazır olup olmadığını kontrol eder."""
         if not self._tesseract_cmd:
-            self._available_cache = False
             return False
-        try:
-            import pytesseract
-            from PIL import Image  # noqa: F401
-            pytesseract.pytesseract.tesseract_cmd = self._tesseract_cmd
-            # Basit bir sürüm sorgusu ile çalışabilirliği doğrula
-            pytesseract.get_tesseract_version()
-            self._available_cache = True
-        except Exception:
-            self._available_cache = False
-        return self._available_cache
+        return _probe_tesseract(self._tesseract_cmd)
 
     @property
     def tesseract_path(self) -> Optional[str]:
