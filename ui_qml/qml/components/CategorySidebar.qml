@@ -127,8 +127,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: theme.borderLight
-            opacity: 0.6
+            color: theme.border
         }
 
         // ── Kategorize Edilmiş Format Listesi (Açılır / Kapanır Akordeon) ──
@@ -302,9 +301,7 @@ Rectangle {
                                             text: Icons.glyph(modelData.icon || "document")
                                             font.family: Icons.FONT_FAMILY
                                             font.pixelSize: 14
-                                            color: itemBtn.isSelected ?
-                                                   (theme.isDark ? "#FFFFFF" : theme.accent) :
-                                                   theme.textPrimary
+                                            color: itemBtn.isSelected ? theme.accent : theme.textPrimary
                                             Layout.alignment: Qt.AlignVCenter
                                         }
 
@@ -314,9 +311,7 @@ Rectangle {
                                             font.family: theme.fontFamily
                                             font.pointSize: 9.5
                                             font.bold: itemBtn.isSelected
-                                            color: itemBtn.isSelected ?
-                                                   (theme.isDark ? "#FFFFFF" : theme.accent) :
-                                                   theme.textPrimary
+                                            color: itemBtn.isSelected ? theme.accent : theme.textPrimary
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
                                             Layout.alignment: Qt.AlignVCenter
@@ -343,7 +338,7 @@ Rectangle {
                                                 font.pointSize: 8
                                                 font.bold: true
                                                 color: itemBtn.isSelected ?
-                                                       "#FFFFFF" :
+                                                       (theme.isDark ? theme.gunmetal : "#FFFFFF") :
                                                        theme.textSecondary
                                             }
                                         }

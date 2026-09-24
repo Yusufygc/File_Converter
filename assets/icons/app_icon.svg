@@ -1,3 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#4B8CF5">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Document Body Gradient -->
+    <linearGradient id="docBody" x1="120" y1="50" x2="390" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#323846"/>
+      <stop offset="50%" stop-color="#292C36"/>
+      <stop offset="100%" stop-color="#1E2028"/>
+    </linearGradient>
+
+    <!-- Silver Fold / Peel Gradient -->
+    <linearGradient id="silverPeel" x1="280" y1="50" x2="420" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F2F4F7"/>
+      <stop offset="35%" stop-color="#D0D5DC"/>
+      <stop offset="70%" stop-color="#9BA1AC"/>
+      <stop offset="100%" stop-color="#6F7480"/>
+    </linearGradient>
+
+    <!-- Cycle Arrows Gradient -->
+    <linearGradient id="arrowGrad" x1="180" y1="200" x2="330" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E2E5E9"/>
+      <stop offset="50%" stop-color="#BDC2C7"/>
+      <stop offset="100%" stop-color="#8E99AC"/>
+    </linearGradient>
+
+    <!-- Drop Shadow for Fold -->
+    <filter id="peelShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="-4" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Document Silhouette -->
+  <!-- Top-left: r=32, Bottom-left: r=32, Bottom-right: r=32, Top-right: cut for fold -->
+  <path d="M 140 50 
+           L 300 50 
+           L 400 150 
+           L 400 430 
+           A 32 32 0 0 1 368 462 
+           L 144 462 
+           A 32 32 0 0 1 112 430 
+           L 112 82 
+           A 32 32 0 0 1 144 50 Z" 
+        fill="url(#docBody)" 
+        stroke="#444957" 
+        stroke-width="3"/>
+
+  <!-- Curved Silver Peel / Fold -->
+  <path d="M 300 50 
+           C 310 110, 340 140, 400 150 
+           C 345 135, 315 105, 300 50 Z" 
+        fill="#1A1C22" 
+        opacity="0.5"/>
+  <path d="M 300 50 
+           C 305 105, 345 145, 400 150 
+           C 335 150, 300 115, 300 50 Z" 
+        fill="url(#silverPeel)" 
+        filter="url(#peelShadow)" 
+        stroke="#A1A7AF" 
+        stroke-width="1.5"/>
+
+  <!-- Central Circular Conversion Arrows -->
+  <g stroke="url(#arrowGrad)" stroke-width="20" stroke-linecap="round" fill="none">
+    <!-- Top Arc (pointing right) -->
+    <path d="M 205 275 A 64 64 0 0 1 315 235" />
+    <!-- Bottom Arc (pointing left) -->
+    <path d="M 307 275 A 64 64 0 0 1 197 315" />
+  </g>
+
+  <!-- Top Arrowhead -->
+  <polygon points="310,215 338,240 305,255" fill="url(#arrowGrad)" />
+  <!-- Bottom Arrowhead -->
+  <polygon points="202,335 174,310 207,295" fill="url(#arrowGrad)" />
 </svg>

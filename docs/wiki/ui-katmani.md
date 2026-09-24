@@ -110,6 +110,22 @@ gösterir.
 alt bileşenlerden (ayrı dosyalarda tanımlı olsalar bile) doğrudan
 `theme.xxx` ile erişilebilir.
 
+### Koyu Tema Renk Paleti (Gunmetal & Silver)
+Paletin 5 rengi anlamsal UI rollerine şu şekilde dağıtılmıştır:
+1. **GUNMETAL** (`#292C36`): Ana pencere tabanı (`bgPrimary`), kademeli yüzey türetimi (`bgSurface`, `bgCard`, `bgElevated`, `bgInput`, `bgHover`) ve açık renkli butonlarda yüksek kontrastlı metin/ikon rengi.
+2. **ROMAN SILVER** (`#848A98`): Soluk/ikincil metinler (`textMuted`), dosya boyutları, yer tutucular, hafif çerçeveler (`border`) ve kart içi ayraçlar.
+3. **COOL GREY** (`#8E99AC`): Giriş/seçim kutuları ve butonların sınır çizgileri (`borderLight`), yarı saydam seçim arka planı (`accentDim`), rozet bordürleri.
+4. **SILVER SAND** (`#BDC2C7`): Birincil yüksek kontrastlı metinler (`textPrimary`), ana dönüştürme butonu (`accent`), aktif seçim göstergeleri.
+5. **METALLIC SILVER** (`#A1A7AF`): İkincil başlıklar ve etiketler (`textSecondary`), butonların üzerine gelindiğindeki vurgu sınırları.
+
+### Açık Tema Renk Paleti (Jet Stream & Slate)
+Açık temadaki 5 resmî renk anlamsal UI rollerine şu şekilde dağıtılmıştır:
+1. **JET STREAM** (`#C1D1CF`): Ana pencere taban zemini (`bgPrimary`) ve kademeli açık yüzeyler (`bgElevated`: `#CFDCDA`).
+2. **DARK JUNGLE GREEN** (`#171F22`): Birincil yüksek kontrastlı metinler (`textPrimary`), ana dönüştürme butonu (`accent`), aktif seçim göstergesi ve aktif onay kutuları.
+3. **GRANITE GRAY (Slate)** (`#636467`): İkincil başlıklar, etiketler (`textSecondary`, `"Format:"`, `"Klasör:"`), hover sınırları.
+4. **LIGHT SLATE GRAY** (`#748B91`): Soluk/ikincil metinler (`textMuted`), rozet bordürleri, yarı saydam seçim arka planı (`accentDim`).
+5. **GRANITE GRAY (Sage)** (`#666B64`): Giriş/seçim kutuları, arama çubuğu ve buton kenarlıkları (`borderLight`), hafif çerçeveler (`border`).
+
 ## İlgili Sayfalar
 
 - [[mimari]] — bu katmanın genel akıştaki yeri

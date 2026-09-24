@@ -9,6 +9,7 @@ Item {
     property string iconSource: ""
     property string iconGlyph: ""
     property string variant: "secondary" // primary | secondary | danger | ghost | accent_outline
+    property string accentColor: "" // "primary" variant için theme.accent yerine kullanılacak özel renk (boşsa theme.accent)
     property bool enabled: true
     property real pointSize: 11
     property bool bold: true
@@ -34,6 +35,10 @@ Item {
                 return (root.variant === "primary") ? theme.bgElevated : "transparent"
             }
             if (root.variant === "primary") {
+                if (root.accentColor !== "") {
+                    return mouseArea.pressed ? Qt.darker(root.accentColor, 1.1) :
+                           mouseArea.containsMouse ? Qt.lighter(root.accentColor, 1.3) : root.accentColor
+                }
                 return mouseArea.pressed ? Qt.darker(theme.accent, 1.1) :
                        mouseArea.containsMouse ? theme.accentHover : theme.accent
             } else if (root.variant === "danger") {
@@ -60,7 +65,7 @@ Item {
                 return mouseArea.containsMouse ? theme.accent : theme.accentDim
             }
             if (root.variant === "ghost") return "transparent"
-            return mouseArea.containsMouse ? theme.textMuted : theme.borderLight
+            return mouseArea.containsMouse ? theme.textSecondary : theme.borderLight
         }
 
         Behavior on color { ColorAnimation { duration: 120 } }
@@ -104,7 +109,7 @@ Item {
 
             color: {
                 if (!root.enabled) return theme.textMuted
-                if (root.variant === "primary") return "#FFFFFF"
+                if (root.variant === "primary") return theme.isDark ? theme.gunmetal : "#FFFFFF"
                 if (root.variant === "danger") return theme.error
                 if (root.variant === "accent_outline") return theme.accent
                 return theme.textPrimary

@@ -420,8 +420,11 @@ class AppBridge(QObject):
 
     @Property(str, constant=True)
     def appIconUrl(self) -> str:
-        path = get_resource_path("assets/icons/app_icon.svg")
-        return QUrl.fromLocalFile(path).toString()
+        png_path = get_resource_path("assets/icons/app_icon.png")
+        if Path(png_path).exists():
+            return QUrl.fromLocalFile(png_path).toString()
+        svg_path = get_resource_path("assets/icons/app_icon.svg")
+        return QUrl.fromLocalFile(svg_path).toString()
 
     # ================================================================== #
     #  SLOTS                                                               #

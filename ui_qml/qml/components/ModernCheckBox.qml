@@ -25,7 +25,7 @@ CheckBox {
             font.family: Icons.FONT_FAMILY
             font.pixelSize: 12
             font.bold: true
-            color: "#FFFFFF"
+            color: theme.isDark ? theme.gunmetal : "#FFFFFF"
             visible: control.checked
         }
 

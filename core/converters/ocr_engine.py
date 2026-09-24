@@ -30,14 +30,25 @@ class OcrEngine:
     def __init__(self, preferred_lang: str = "tur+eng"):
         self._preferred_lang = preferred_lang
         self._tesseract_cmd: Optional[str] = self._find_tesseract_binary()
+        self._available_cache: Optional[bool] = None
 
     # ------------------------------------------------------------------ #
     #  Durum & Keşif                                                      #
     # ------------------------------------------------------------------ #
 
     def is_available(self) -> bool:
-        """Sistemde Tesseract binary ve pytesseract'in hazır olup olmadığını kontrol eder."""
+        """
+        Sistemde Tesseract binary ve pytesseract'in hazır olup olmadığını kontrol eder.
+        Sonuç instance ömrü boyunca cache'lenir — `pytesseract.get_tesseract_version()`
+        her çağrıda bir `tesseract.exe --version` subprocess'i başlatıyor; bu property
+        UI tarafından converter seçimi gibi sık tetiklenen olaylarda tekrar tekrar
+        okunuyor, cache'siz hali gözle görülür donmaya yol açıyordu.
+        """
+        if self._available_cache is not None:
+            return self._available_cache
+
         if not self._tesseract_cmd:
+            self._available_cache = False
             return False
         try:
             import pytesseract
@@ -45,9 +56,10 @@ class OcrEngine:
             pytesseract.pytesseract.tesseract_cmd = self._tesseract_cmd
             # Basit bir sürüm sorgusu ile çalışabilirliği doğrula
             pytesseract.get_tesseract_version()
-            return True
+            self._available_cache = True
         except Exception:
-            return False
+            self._available_cache = False
+        return self._available_cache
 
     @property
     def tesseract_path(self) -> Optional[str]:

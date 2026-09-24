@@ -4,6 +4,67 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-24] [FIX] | Converter seçiminde donma — OcrEngine.is_available() cache'lenmedi
+
+Kullanıcı raporu: "PDF → DOCX"/"PDF → TXT" seçilince kısa bir donma/
+kasılma oluyordu. Kök neden: `OcrEngine.is_available()`
+(`core/converters/ocr_engine.py`) her çağrıda `pytesseract.get_tesseract_version()`
+ile bir `tesseract.exe --version` subprocess'i başlatıyordu, sonucu
+hiç cache'lemiyordu. `PdfToDocxConverter`/`PdfToTxtConverter`'ın
+`active_engine_name`/`is_available`/`available_engines()` property'leri
+bunu ayrı ayrı çağırıyor; `AppBridge.selectConverter()`'ın emit ettiği
+sinyallere bağlı `SettingsView.qml` (her zaman canlı, Loader değil)
+tek bir converter seçiminde bu subprocess'i 3-4 kez tetikliyordu —
+UI thread senkron blokleniyordu. Tesseract bu oturumda kurulana kadar
+`_tesseract_cmd` `None` olduğu için erken dönüş yapılıyordu, sorun
+gözükmüyordu; kurulumdan sonra ortaya çıktı. Çözüm: `OcrEngine`'e
+instance ömrü boyunca geçerli `_available_cache` eklendi — ilk çağrı
+gerçek kontrolü yapar (~140ms), sonraki tüm çağrılar anında döner
+(~0ms). Detay: [[test-ve-bagimliliklar]].
+
+## [2026-09-24] [INGEST] | Yeni Gunmetal & Silver uygulama ikonu ve çoklu-çözünürlüklü .ico paketi
+
+Eski mavi şimşek ikonu yerine, uygulamanın dosya dönüştürme kimliğini ve
+yeni Gunmetal & Silver tasarım dilini yansıtan profesyonel bir masaüstü ikonu
+tasarlandı ve üretildi.
+- `assets/icons/app_icon.ico`: Windows standartlarındaki tüm piksel
+  ölçülerini (16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256) tek bir
+  çoklu-çözünürlüklü ICO dosyasında barındırır; `fileconvert.spec` ve
+  `setup.iss` ile exe/kısayol/kurulum simgeleri güncellendi.
+- `assets/icons/app_icon.png` (512x512) ve ayrık PNG varyantları (`app_icon_16`,
+  `_24`, `_32`, `_48`, `_64`, `_128`, `_256`).
+- `assets/icons/app_icon.svg`: Vektörel yedek logo dosyası yenilendi.
+- `AppBridge.appIconUrl` artık doğrudan yüksek çözünürlüklü ve şeffaf
+  `app_icon.png`'yi HeaderBar ve DropZone'a besliyor. Detay: [[paketleme]], [[ui-katmani]].
+
+## [2026-09-24] [REFACTOR] | Açık tema: Jet Stream & Slate 5'li resmî renk paleti entegrasyonu
+
+Açık temadaki eski mavi (`#3B6FD6`, `#DCE6FB`) ve eksik kalan vurgu mekanizmaları
+kaldırılarak 5'li resmî paletin tamamı (`jetStream`: `#C1D1CF`, `darkJungleGreen`:
+`#171F22`, `graniteGray`: `#636467`, `lightSlateGray`: `#748B91`, `sageGranite`:
+`#666B64`) anlamsal rollere eksiksiz bağlandı:
+- `jetStream` (`#C1D1CF`): Ana pencere tabanı (`bgPrimary`) ve açık zemin kademeleri.
+- `darkJungleGreen` (`#171F22`): Birincil tipografi (`textPrimary`), ana eylem butonu (`accent`, "Dönüştürmeyi Başlat"), aktif seçim çubuğu ve aktif onay kutusu.
+- `graniteGray` (`#636467`): İkincil tipografi (`textSecondary`), etiketler ve buton hover sınırları.
+- `lightSlateGray` (`#748B91`): Soluk/ikincil metinler (`textMuted`), rozet çerçeveleri, yarı saydam seçim arka planı (`accentDim`).
+- `sageGranite` (`#666B64`): Giriş/seçim kutuları, ComboBox, SpinBox ve arama çubuğu sınırları (`borderLight`), hafif çerçeveler (`border`).
+`MainCanvas.qml` içindeki gereksiz `accentColor` override'ı temizlenerek her iki
+temada da `theme.accent`'e homojen geçiş sağlandı. Detay: [[ui-katmani]].
+
+## [2026-09-24] [REFACTOR] | Koyu tema: Gunmetal & Silver 5'li resmî renk paleti entegrasyonu
+
+Koyu temadaki eski mavi (`#4B8CF5`, `#1E3A7A`) ve belirsiz çerçeve değerleri
+kaldırılarak 5'li resmî paletin tamamı (`gunmetal`: `#292C36`, `romanSilver`:
+`#848A98`, `coolGrey`: `#8E99AC`, `silverSand`: `#BDC2C7`, `metallicSilver`:
+`#A1A7AF`) anlamsal rollere eksiksiz bağlandı:
+- `gunmetal` (`#292C36`): Ana taban zemini (`bgPrimary`), kademeli yüzeyler ve açık renkli butonlarda ters metin rengi.
+- `silverSand` (`#BDC2C7`): Birincil tipografi (`textPrimary`), ana eylem butonu (`accent`, "Dönüştürmeyi Başlat"), aktif seçim göstergeleri.
+- `metallicSilver` (`#A1A7AF`): İkincil tipografi (`textSecondary`), etiketler, buton hover sınırları.
+- `coolGrey` (`#8E99AC`): Belirgin kenarlıklar (`borderLight`), arama ve giriş kutuları, rozetler, seçim arka planı (`accentDim`).
+- `romanSilver` (`#848A98`): Soluk/açıklama metinleri (`textMuted`), kart ve panel ayracı hafif çerçeveler (`border`).
+`ModernButton.qml`, `CategorySidebar.qml` ve `ModernCheckBox.qml` içindeki
+kontrastlar Gunmetal/Silver Sand kombinasyonuna uyarlandı. Detay: [[ui-katmani]].
+
 ## [2026-09-24] [FIX] | PDF Böl: sayfa aralığı artık TEK PDF üretiyor
 
 Kullanıcı geri bildirimi: 2 PDF'i "1-3" aralığıyla bölünce 6 ayrı dosya

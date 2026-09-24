@@ -48,6 +48,8 @@ Rectangle {
             width: badgeText.implicitWidth + 16
             radius: 4
             color: theme.accentDim
+            border.color: theme.isDark ? theme.coolGrey : theme.lightSlateGray
+            border.width: 1
             anchors.verticalCenter: parent.verticalCenter
 
             Text {

@@ -37,10 +37,11 @@ dahil hatasız açıldı).
 - **LibreOffice / Microsoft Office paketlenmiyor** — bu harici araçlar
   kullanıcının sisteminde ayrıca kurulu olmalı (bkz. [[test-ve-bagimliliklar]]).
   Paketlenmiş exe yalnızca Python/Qt/PyMuPDF/pdf2docx bağımlılıklarını içerir.
-- **`.exe` simgesi yok** — mevcut varlıklar yalnızca `.svg`/`.png`;
-  Windows'ta `.exe` dosyasının kendi simgesi için ayrı bir `.ico`
-  üretilmedi (opsiyonel iyileştirme, `.spec`'e `icon=` parametresiyle
-  eklenebilir).
+- **`.exe` simgesi mevcut** — `assets/icons/app_icon.ico` dosyası
+  Windows standardındaki tüm çözünürlükleri (16x16, 24x24, 32x32, 48x48,
+  64x64, 128x128, 256x256) içerir; `fileconvert.spec` ve Inno Setup
+  `setup.iss` yapılandırmasında entegredir. Ayrık PNG varyantları da
+  `assets/icons/` altında mevcuttur.
 - Yalnızca Windows'ta test edildi (`win32com`/`pywin32` zaten yalnızca
   Windows'ta kurulu — bkz. `requirements.txt`).
 
