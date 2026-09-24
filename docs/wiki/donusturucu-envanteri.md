@@ -11,12 +11,12 @@ anahtarına sınıf adı eklenmesi bunların birbirini ezmesini önlüyor
 | Converter | Kaynak → Hedef | Motor(lar) | Yetenekler | Özel davranış |
 |---|---|---|---|---|
 | `PptxToPdfConverter` | `.pptx` → `.pdf` | MS Office (win32com) → LibreOffice fallback | Motor seçimi (`IEngineSelectable`) | Tek gerçek kullanıcı-seçimli motor; `_MsOfficeStrategy`/`_LibreOfficeStrategy` |
-| `DocxToPdfConverter` | `.docx` → `.pdf` | Yalnızca LibreOffice | — | `PdfToOdtConverter` ile aynı tek-motor deseni; `PdfToDocxConverter`'ın ters yönü |
+| `DocxToPdfConverter` | `.docx` → `.pdf` | Yalnızca LibreOffice | — | Tek-motor deseni; `PdfToDocxConverter`'ın ters yönü |
 | `DocxToTxtConverter` | `.docx` → `.txt` | `python-docx` | Paralel-güvenli | LibreOffice gerekmez — yalnızca `document.paragraphs` metnini çıkarır (tablo/başlık kapsanmaz) |
 | `DocxToOdtConverter` | `.docx` → `.odt` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı (bkz. aşağıdaki not) |
 | `OdtToDocxConverter` | `.odt` → `.docx` | Yalnızca LibreOffice | — | `SimpleLibreOfficeConverter` alt sınıfı |
 | `PdfToDocxConverter` | `.pdf` → `.docx` | pdf2docx → OCR (Tesseract) → Görsel Gömme → LibreOffice fallback | Akıllı Belge Analizi (`PdfInspector`) | Dijital PDF'lerde `pdf2docx` (1-2s); taranmış PDF'lerde OCR (Tesseract); OCR yoksa temiz sayfa görseli gömme |
-| `PdfToOdtConverter` | `.pdf` → `.odt` | Yalnızca LibreOffice | — | — |
+| `PdfToOdtConverter` | `.pdf` → `.odt` | `PdfToDocxConverter` hattı + LibreOffice (DOCX→ODT) | — | PDF önce geçici DOCX'e (pdf2docx/OCR/görsel gömme) çevrilir, sonra LibreOffice ODT yapar. LibreOffice'in PDF içe aktarması çizim yoğun PDF'lerde 15 dk+ sürüp düzenlenemez metin kutuları ürettiği için kullanılmıyor — bkz. [[libreoffice-motoru]] |
 | `PdfToJpgConverter` | `.pdf` → `.jpg` | PyMuPDF (`fitz`) | Paralel-güvenli | **Çok sayfalı PDF'te her sayfa ayrı dosya**: `ad_p1.jpg, ad_p2.jpg, ...`; tek sayfada `ad.jpg`. `options.dpi` render çözünürlüğü, `options.quality` JPEG kalitesi |
 | `PdfToPngConverter` | `.pdf` → `.png` | PyMuPDF (`fitz`) | Paralel-güvenli | `PdfToJpgConverter` ile aynı rasterizasyon mantığı (çok sayfada `_p{n}` suffix); PNG kayıpsız olduğu için `options.quality` kullanılmaz |
 | `PdfToTxtConverter` | `.pdf` → `.txt` | PyMuPDF (`fitz`) + OCR (Tesseract) | Paralel-güvenli, OCR Destekli | Dijital PDF'lerde doğrudan metin çıkarımı; taranmış PDF'lerde OCR motoru varsa otomatik OCR ile metin çıkarır |

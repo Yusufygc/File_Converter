@@ -4,6 +4,24 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-09-24] [FIX] | PDF→ODT yavaşlığı + dönüştürücü hız denetimi
+
+Kullanıcı: "PDF→ODT çok yavaş" (ders slaytı PDF'lerinde dosya başı ~1 dk).
+19 converter gerçek dosyalarla ölçüldü; PyMuPDF/python-docx tabanlılar
+<1 sn, LibreOffice tabanlılar ~0.9–1.6 sn, PPTX→PDF (MS Office COM) ~4–5 sn.
+Darboğaz `writer_pdf_import`: 45 sayfalık vektör ağırlıklı PDF'te 15 dk
+zaman aşımı, ayrıca çıktı düzenlenemez (17 sayfalık makalede 2181 metin
+kutusu). `PdfToOdtConverter` artık `PdfToDocxConverter` hattı + LO
+DOCX→ODT kullanıyor: aynı PDF'ler 7 / 27 / 40 sn, 0 metin kutusu. Bedeli:
+basit PDF'lerde eski yola göre ~1.5–2 kat yavaş (4.7→7.2 sn, 12.2→26.7 sn),
+kalite farkı nedeniyle kabul edildi. `LibreOfficeEngine` izole kalıcı
+profil kullanıyor (`%LOCALAPPDATA%\FileConvert\libreoffice_profile`):
+kullanıcının açık LibreOffice'i istekleri devralıp meşgulken boş hatayla
+başarısız ediyordu. PDF→DOCX'in motor etiketi "OCR (Tesseract)" yerine
+gerçek davranışı gösteriyor ("pdf2docx + OCR"). Sıcak LO örneği denendi,
+headless örnek ilk devredilen istekten sonra kapandığı için elendi.
+Detay: [[libreoffice-motoru]], [[donusturucu-envanteri]].
+
 ## [2026-09-24] [FIX] | Kurulu exe'de sadece PPTX→PDF + açılışta cmd pencereleri
 
 Kurulumdan sonra iki sorun: (1) yalnızca PPTX→PDF görünüyordu — `core/`

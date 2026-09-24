@@ -10,10 +10,23 @@ SRP : Yalnızca LibreOffice headless süreciyle konuşmaktan sorumlu.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import List, Optional
+
+
+def _profile_dir() -> Path:
+    """
+    Uygulamaya özel, kalıcı LibreOffice kullanıcı profili. Varsayılan profil
+    paylaşılırsa kullanıcının açık LibreOffice penceresi dönüşüm isteklerini
+    devralıyor: o pencere meşgulken (belge yüklüyor, diyalog açık) dönüşüm
+    boş bir hatayla başarısız oluyor veya asılı kalıyor. Kalıcı olması, ilk
+    çalıştırmadaki ~3 sn'lik profil oluşturma maliyetini yalnızca bir kez öder.
+    """
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / ".cache")
+    return Path(base) / "FileConvert" / "libreoffice_profile"
 
 
 class LibreOfficeEngine:
@@ -55,6 +68,7 @@ class LibreOfficeEngine:
             "--invisible",
             "--nologo",
             "--norestore",
+            "-env:UserInstallation=" + _profile_dir().as_uri(),
             *(extra_args or []),
             "--convert-to", ext,
             "--outdir", str(out_dir),
@@ -69,10 +83,11 @@ class LibreOfficeEngine:
             timeout=120,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
+        stdout = result.stdout
 
         if result.returncode != 0:
             raise RuntimeError(
-                f"LibreOffice hatası:\n{result.stderr or result.stdout}"
+                f"LibreOffice hatası (kod {result.returncode}):\n{result.stderr or stdout}"
             )
 
         lo_out = out_dir / (source_path.stem + f".{ext}")
@@ -84,7 +99,7 @@ class LibreOfficeEngine:
             else:
                 raise FileNotFoundError(
                     f"Dönüşüm sonrası dosya bulunamadı: {lo_out}\n"
-                    f"LibreOffice çıktısı:\n{result.stdout}"
+                    f"LibreOffice çıktısı:\n{stdout}"
                 )
 
         if lo_out != output_path:

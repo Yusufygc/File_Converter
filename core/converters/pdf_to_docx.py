@@ -16,6 +16,7 @@ OCP : Yeni motor için yeni _Strategy subclass'ı yaz.
 from __future__ import annotations
 
 import io
+import tempfile
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from pathlib import Path
@@ -300,6 +301,9 @@ class PdfToDocxConverter(BaseConverter):
 
     @property
     def active_engine_name(self) -> str:
+        # Dijital PDF'ler her zaman pdf2docx ile dönüşür; OCR yalnızca taranmışlarda devreye girer.
+        if self._pdf2docx_strat.is_available():
+            return "pdf2docx + OCR" if self._ocr_strat.is_available() else "pdf2docx"
         names = {
             PdfConversionEngine.PDF2DOCX:    "pdf2docx",
             PdfConversionEngine.OCR:         "OCR (Tesseract)",
@@ -324,11 +328,18 @@ class PdfToDocxConverter(BaseConverter):
 class PdfToOdtConverter(BaseConverter):
     """
     PDF → ODT dönüştürücü.
-    Yalnızca LibreOffice headless kullanır.
+    Önce `PdfToDocxConverter`'ın akıllı hattıyla (pdf2docx / OCR / görsel
+    gömme) geçici bir DOCX üretilir, ardından LibreOffice DOCX → ODT yapar.
+
+    LibreOffice'in PDF içe aktarıcısı (`writer_pdf_import`) doğrudan
+    kullanılmıyor: çizim yoğun PDF'lerde tek çekirdeği dakikalarca
+    kilitliyor (45 sayfalık bir ders notunda 15 dk+, bu hatla ~40 sn) ve
+    her satırı konumlandırılmış çerçeve yapıp düzenlenemez çıktı üretiyor.
     """
 
     def __init__(self):
-        self._lo_strategy = _LibreOfficePdfStrategy()
+        self._to_docx = PdfToDocxConverter()
+        self._lo = LibreOfficeEngine()
 
     @property
     def source_extension(self) -> str:
@@ -348,8 +359,14 @@ class PdfToOdtConverter(BaseConverter):
         output_path: Path,
         options: ConversionOptions,
     ) -> Optional[ConvertOutcome]:
-        self._lo_strategy.convert(source_path, output_path, ".odt")
-        return None
+        with tempfile.TemporaryDirectory(prefix="fileconvert_") as tmp:
+            docx_result = self._to_docx.convert(source_path, ConversionOptions(output_dir=Path(tmp)))
+            if not docx_result.success:
+                raise RuntimeError(docx_result.error_message)
+            # LibreOffice çıktıyı kaynak adına göre adlandırır; ara DOCX'in adı hedefle aynı olmalı.
+            tmp_docx = docx_result.output_path.rename(Path(tmp) / f"{output_path.stem}.docx")
+            self._lo.convert_to(tmp_docx, output_path, "odt")
+        return ConvertOutcome(page_count=docx_result.page_count)
 
     @property
     def unavailable_hint(self) -> str:
@@ -362,8 +379,10 @@ class PdfToOdtConverter(BaseConverter):
 
     @property
     def is_available(self) -> bool:
-        return self._lo_strategy.is_available()
+        return self._lo.is_available() and self._to_docx.is_available
 
     @property
     def active_engine_name(self) -> str:
-        return "LibreOffice" if self._lo_strategy.is_available() else "Yok"
+        if not self.is_available:
+            return "Yok"
+        return f"{self._to_docx.active_engine_name} + LibreOffice"
