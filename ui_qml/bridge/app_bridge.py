@@ -33,7 +33,9 @@ from core.interfaces.converter_interface import (
 )
 from core.interfaces.engine_interface import IEngineSelectable
 from core.interfaces.merge_interface import IMergeConverter
+from core.interfaces.option_schema_interface import IOptionsProvider, default_option_values
 from core.interfaces.page_range_interface import IPageRangeSelectable
+from core.user_texts import HINT_LIBREOFFICE
 from core.utils.resource_helper import get_resource_path
 from ui_qml.bridge.app_settings import QmlAppSettings
 from ui_qml.bridge.conversion_worker import QmlConversionWorker, QmlMergeWorker
@@ -43,6 +45,9 @@ from ui_qml.bridge.file_list_model import FileListModel
 
 _PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
     (".pptx", ".pdf"),
+    (".pptx", ".odp"),
+    (".odp", ".pptx"),
+    (".odp", ".pdf"),
     (".docx", ".pdf"),
     (".docx", ".txt"),
     (".docx", ".odt"),
@@ -55,6 +60,16 @@ _PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
     (".pdf", ".pdf", "PdfCompressConverter"),
     (".pdf", ".pdf", "PdfSplitConverter"),
     (".pdf", ".pdf", "PdfMergeConverter"),
+    (".pdf", ".pdf", "PdfRotateConverter"),
+    (".pdf", ".pdf", "PdfPageNumbersConverter"),
+    (".pdf", ".pdf", "PdfWatermarkConverter"),
+    (".pdf", ".pdf", "PdfProtectConverter"),
+    (".pdf", ".pdf", "PdfUnlockConverter"),
+    (".pdf", ".pdf", "PdfRepairConverter"),
+    (".pdf", ".png", "PdfExtractImagesConverter"),
+    (".pdf", ".pdf", "PdfOcrConverter"),
+    (".pdf", ".md"),
+    (".pdf", ".xlsx"),
     (".xlsx", ".pdf"),
     (".xlsx", ".csv"),
     (".csv", ".xlsx"),
@@ -62,6 +77,19 @@ _PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
     (".ods", ".xlsx"),
     (".jpg", ".pdf"),
 ]
+
+
+# Aynı `.pdf`→`.pdf` çiftini paylaşan araçlar uzantıdan ayırt edilemediği
+# için kısa ad ve ikon sınıf adına göre seçilir.
+_PDF_TOOL_META: Dict[str, Tuple[str, str]] = {
+    "PdfRotateConverter": ("PDF Döndür", "rotate"),
+    "PdfPageNumbersConverter": ("Sayfa Numarası", "page_number"),
+    "PdfWatermarkConverter": ("Filigran", "watermark"),
+    "PdfProtectConverter": ("PDF Şifrele", "lock"),
+    "PdfUnlockConverter": ("Şifre Kaldır", "unlock"),
+    "PdfRepairConverter": ("PDF Onar", "repair"),
+    "PdfOcrConverter": ("Aranabilir PDF", "ocr"),
+}
 
 
 def _sort_key(converter: IConverter):
@@ -74,6 +102,19 @@ def _sort_key(converter: IConverter):
     return (1, converter.display_name)
 
 
+def _option_specs_of(c: IConverter) -> List[Dict[str, Any]]:
+    """`IOptionsProvider` şemasını QML'in okuyabileceği sözlük listesine çevirir."""
+    if not isinstance(c, IOptionsProvider):
+        return []
+    return [spec.to_dict() for spec in c.option_specs]
+
+
+def _default_extra_of(c: IConverter) -> Dict[str, Any]:
+    if not isinstance(c, IOptionsProvider):
+        return {}
+    return default_option_values(c.option_specs)
+
+
 def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any]]:
     """Kategori ID ve zenginleştirilmiş dönüştürücü meta verisi döndürür."""
     cls_name = c.__class__.__name__
@@ -81,7 +122,16 @@ def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any
     t_ext = c.target_extension.lower()
     accepted = sorted(c.accepted_extensions)
 
-    if "Compress" in cls_name:
+    if cls_name in _PDF_TOOL_META:
+        cat_id = "pdf_tools"
+        short_name, icon = _PDF_TOOL_META[cls_name]
+        badge = "PDF"
+    elif cls_name == "PdfExtractImagesConverter":
+        cat_id = "images"
+        short_name = "PDF ➔ Görseller"
+        icon = "image"
+        badge = "IMG"
+    elif "Compress" in cls_name:
         cat_id = "pdf_tools"
         short_name = "PDF Sıkıştır"
         icon = "compress"
@@ -134,6 +184,7 @@ def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any
         "supportsMerge": isinstance(c, IMergeConverter),
         "supportsPageRange": isinstance(c, IPageRangeSelectable),
         "supportsEngineSelect": isinstance(c, IEngineSelectable),
+        "optionSpecs": _option_specs_of(c),
     }
     return cat_id, item_data
 
@@ -218,6 +269,10 @@ class AppBridge(QObject):
                     self._active_converter = c
                     break
 
+        # Araca özgü parametreler (parola dahil) bilinçli olarak QSettings'e
+        # yazılmaz — her açılışta ve converter değişiminde varsayılana döner.
+        self._extra_options: Dict[str, Any] = _default_extra_of(self._active_converter)
+
     # ================================================================== #
     #  PROPERTIES                                                          #
     # ================================================================== #
@@ -258,6 +313,7 @@ class AppBridge(QObject):
                     "supportsMerge": isinstance(c, IMergeConverter),
                     "supportsPageRange": isinstance(c, IPageRangeSelectable),
                     "supportsEngineSelect": isinstance(c, IEngineSelectable),
+                    "optionSpecs": _option_specs_of(c),
                 }
             )
         return result
@@ -299,6 +355,7 @@ class AppBridge(QObject):
             "supportsMerge": isinstance(c, IMergeConverter),
             "supportsPageRange": isinstance(c, IPageRangeSelectable),
             "supportsEngineSelect": isinstance(c, IEngineSelectable),
+            "optionSpecs": _option_specs_of(c),
         }
 
     @Property(list, notify=engineListChanged)
@@ -459,6 +516,7 @@ class AppBridge(QObject):
         self._file_model.clear()
         self._is_merge_mode = False
         self._page_range = ""
+        self._extra_options = _default_extra_of(self._active_converter)
 
         # Tercih kaydı
         self._settings.save_converter_info(
@@ -490,13 +548,13 @@ class AppBridge(QObject):
         success = c.set_preferred_engine(engine)
         if engine is not None and not success:
             hint = (
-                "pip install pywin32"
+                "Bu yöntem için Microsoft Office'in kurulu olması gerekiyor."
                 if engine == ConversionEngine.MS_OFFICE
-                else "https://www.libreoffice.org/download"
+                else HINT_LIBREOFFICE
             )
             self.notificationRequested.emit(
-                "Motor Kullanılamıyor",
-                f"Seçilen motor bu sistemde mevcut değil.\n\n{hint}",
+                "Yöntem Kullanılamıyor",
+                f"Seçilen dönüştürme yöntemi bu bilgisayarda kullanılamıyor.\n\n{hint}",
             )
 
         self.selectedEngineIndexChanged.emit(index)
@@ -540,6 +598,13 @@ class AppBridge(QObject):
         if self._page_range != val:
             self._page_range = val
             self.pageRangeChanged.emit(val)
+
+    @Slot(str, "QVariant")
+    def setExtraOption(self, key: str, value: Any) -> None:
+        """QML'deki dinamik seçenek alanlarından gelen değeri saklar."""
+        valid_keys = {spec["key"] for spec in _option_specs_of(self._active_converter)}
+        if key in valid_keys:
+            self._extra_options[key] = value
 
     # ── Dosya Ekleme / Kaldırma ───────────────────────────────────────
     @Slot(list)
@@ -624,19 +689,13 @@ class AppBridge(QObject):
 
         if not self._active_converter.is_available:
             self.notificationRequested.emit(
-                "Motor Bulunamadı",
-                f"{self._active_converter.display_name} dönüşümü için gerekli araç kurulu değil.\n\n"
+                "Gerekli Program Eksik",
+                f"{self._active_converter.display_name} şu anda kullanılamıyor.\n\n"
                 + self._active_converter.unavailable_hint,
             )
             return
 
-        options = ConversionOptions(
-            output_dir=self._output_dir,
-            dpi=self._dpi,
-            quality=self._quality,
-            overwrite_existing=self._overwrite_existing,
-            page_range=self._page_range.strip() or None,
-        )
+        options = self._build_options()
 
         self._cancel_requested = False
         self._set_converting(True)
@@ -730,6 +789,16 @@ class AppBridge(QObject):
         self.summaryDataChanged.emit()
         self._show_summary_modal = True
         self.showSummaryModalChanged.emit(True)
+
+    def _build_options(self) -> ConversionOptions:
+        return ConversionOptions(
+            output_dir=self._output_dir,
+            dpi=self._dpi,
+            quality=self._quality,
+            overwrite_existing=self._overwrite_existing,
+            page_range=self._page_range.strip() or None,
+            extra=dict(self._extra_options),
+        )
 
     def _set_converting(self, converting: bool) -> None:
         self._is_converting = converting

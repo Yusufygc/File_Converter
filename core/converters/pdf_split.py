@@ -22,8 +22,10 @@ from pathlib import Path
 from typing import List, Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
+from core.converters.page_range import parse_page_range
 from core.interfaces.converter_interface import ConversionOptions
 from core.interfaces.page_range_interface import IPageRangeSelectable
+from core.user_texts import ENGINE_BUILTIN, ENGINE_UNAVAILABLE, HINT_BUILTIN_MISSING
 
 
 class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
@@ -55,37 +57,7 @@ class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
         return out_dir / f"{source_path.stem}_sayfa1.pdf"
 
     def parse_page_range(self, page_range: str, page_count: int) -> List[int]:
-        pages: List[int] = []
-        seen = set()
-        for part in page_range.split(","):
-            part = part.strip()
-            if not part:
-                continue
-            if "-" in part:
-                start_str, _, end_str = part.partition("-")
-                try:
-                    start, end = int(start_str.strip()), int(end_str.strip())
-                except ValueError:
-                    raise ValueError(f"Geçersiz sayfa aralığı: '{part}'") from None
-            else:
-                try:
-                    start = end = int(part)
-                except ValueError:
-                    raise ValueError(f"Geçersiz sayfa numarası: '{part}'") from None
-
-            if start < 1 or end < start or end > page_count:
-                raise ValueError(
-                    f"Geçersiz sayfa aralığı: '{part}' (belge {page_count} sayfa içeriyor)"
-                )
-
-            for page_num in range(start, end + 1):
-                if page_num not in seen:
-                    seen.add(page_num)
-                    pages.append(page_num)
-
-        if not pages:
-            raise ValueError("Sayfa aralığı boş.")
-        return pages
+        return parse_page_range(page_range, page_count)
 
     def _do_convert(
         self,
@@ -134,11 +106,7 @@ class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "Dönüşüm motoru bulunamadı.\n\n"
-            "PyMuPDF (önerilen):\n"
-            "  pip install pymupdf"
-        )
+        return HINT_BUILTIN_MISSING
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -154,7 +122,7 @@ class PdfSplitConverter(BaseConverter, IPageRangeSelectable):
 
     @property
     def active_engine_name(self) -> str:
-        return "PyMuPDF" if self.is_available else "Yok"
+        return ENGINE_BUILTIN if self.is_available else ENGINE_UNAVAILABLE
 
     @property
     def is_parallel_safe(self) -> bool:

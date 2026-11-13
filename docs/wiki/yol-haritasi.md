@@ -73,13 +73,37 @@ her biri ~8 satıra indi. Bu, "abstract kalarak `discovery.py`'den
 kaçınma" deseninin ilk kullanımı; ileride benzer factory-tarzı
 converter grupları için referans.
 
+## iLovePDF Genişletmesi (Paket 1–3) — ✅ Tamamlandı
+
+2026-11-13: REA ile ilovepdf.com tarandı (31 araç), mevcut converter'larla
+eşleştirildi, masaüstü dönüştürücü kapsamına uyanlar 3 pakette eklendi
+(19 → 32 converter, detay: [[donusturucu-envanteri]]):
+
+| Paket | İçerik | Mimari not |
+|---|---|---|
+| 1 | PPTX→ODP, ODP→PPTX, ODP→PDF | `SimpleLibreOfficeConverter` alt sınıfları, sıfır yeni bağımlılık |
+| 2 | PDF Döndür, Sayfa Numarası, Filigran, Şifrele, Şifre Kaldır, Onar, Görsel Çıkar | Yeni **genel option şeması** (`IOptionsProvider`/`OptionSpec`/`ConversionOptions.extra`, bkz. [[converter-arayuzu]]) + `PyMuPdfToolConverter` tabanı + `DynamicOptionField.qml` ([[ui-katmani]]) |
+| 3 | Aranabilir PDF (OCR), PDF→Markdown, PDF→Excel | Yeni bağımlılık: `pymupdf4llm`, `openpyxl` ([[test-ve-bagimliliklar]], [[paketleme]]) |
+
+**Bilinçli olarak alınmayanlar**:
+- **PDF→PDF/A** — LibreOffice'e PDF açtırmayı gerektiriyor; bu yol çizim
+  yoğun PDF'lerde 15 dk+ sürüyor (bkz. [[libreoffice-motoru]]).
+- **Düzenle, İmzala, Organize, Kırp, Karart, Formlar, Karşılaştır** —
+  sayfa önizlemeli etkileşimli editör gerektirir, dönüştürücü kapsamı dışı.
+- **AI Özet, Çeviri** — dış API, ayrı ürün kapsamı.
+- **HTML→PDF** — URL indirme + headless tarayıcı bağımlılığı.
+- **PDF→PowerPoint** — Ofis genişletmesindeki Tier B kararı (düşük kalite) geçerli.
+- Görsel filigran (yalnızca metin filigranı var), şifrelemede ayrı
+  owner parolası/izin seçimi — ihtiyaç doğarsa `OptionSpec` ile UI
+  kodu yazmadan eklenebilir.
+
 ## Kademe 3 — Büyük / Stratejik (mimari zaten hazır, ayrı planlama gerekir)
 
 | # | Özellik | Neden | Efor | Not |
 |---|---|---|---|---|
 | 14 | **CLI modu** | `core/conversion_facade.py` **tam olarak bunun için** Qt'siz tasarlandı (bkz. [[mimari]]) — şu an yalnızca `ui/` bunu çağırıyor. `fileconvert convert giris.pdf --hedef jpg` gibi bir komut satırı arayüzü, mimarinin doğal bir sonraki adımı. | Orta | Yeni bir `cli.py` (argparse/click) + `core.converters.discovery`/`conversion_facade` — `ui/`'a hiç dokunmadan eklenebilir, ayrım tam olarak bunu kanıtlıyor |
 | 15 | **OCR desteği (taranmış PDF)** | `pdf2docx` şu an taranmış PDF'lerde "0 kelime, muhtemelen taranmış" uyarısı veriyor ve sessizce boş sonuç üretiyor (mevcut kodda zaten bu log var). Tesseract/`pytesseract` ile OCR katmanı eklenirse bu senaryo gerçek destek kazanır. | Yüksek | Yeni bir harici bağımlılık (Tesseract binary) + [[donusturucu-envanteri]]'ne yeni satır |
-| 16 | **Şifreli PDF desteği** | Parola korumalı PDF'ler şu an muhtemelen sessizce/hata ile başarısız oluyor; parola sorma akışı eklenmedi. | Orta | `ConversionOptions`'a opsiyonel `password` alanı + PyMuPDF/`pdf2docx`'in şifre API'leri |
+| 16 | ✅ **Şifreli PDF desteği** (kısmen — iLovePDF Paket 2: `PdfProtectConverter`/`PdfUnlockConverter`; diğer converter'lar şifreli girdide hâlâ "önce şifre kaldır" ister) | Parola korumalı PDF'ler şu an muhtemelen sessizce/hata ile başarısız oluyor; parola sorma akışı eklenmedi. | Orta | `ConversionOptions`'a opsiyonel `password` alanı + PyMuPDF/`pdf2docx`'in şifre API'leri |
 | 17 | **Harici plugin klasörü** | `core/converters/discovery.py` şu an yalnızca kendi paketini tarıyor (bkz. [[converter-ekleme]]). Kullanıcı bilgisayarındaki ayrı bir klasörü (örn. `%APPDATA%/FileConvertPro/plugins/`) de tarayacak şekilde genişletilirse gerçek 3.-parti eklenti dağıtımı mümkün olur. | Yüksek | Güvenlik notu: dış klasörden keyfi Python kodu çalıştırmak güven sınırını genişletir, imzalama/sandbox tartışılmalı |
 | 18 | **Windows Gezgini sağ-tık entegrasyonu** | "Dosyaya sağ tıkla → FileConvert ile dönüştür" — masaüstü uygulaması için doğal beklenti. | Yüksek | Registry shell extension, platform-specific, paketleme (madde 5) sonrası anlamlı |
 | 19 | **Çoklu dil (i18n)** | Şu an tüm UI metni Türkçe hardcoded (bkz. [[rules]] — proje dili Türkçe). Uluslararası kullanıcı hedefleniyorsa Qt `QTranslator` ile ayrıştırma gerekir. | Yüksek | Büyük bir string-çıkarma emeği; yalnızca gerçekten ihtiyaç varsa önerilir |
@@ -92,7 +116,7 @@ Kademe 1, Kademe 2 (7 madde) ve Ofis Format Genişletmesi tamamlandı.
 turda istenmedi, Kademe 3'ün geri kalanından (OCR, şifreli PDF, harici
 plugin klasörü, sağ-tık entegrasyonu, i18n) da hiçbiri şu an gündemde
 değil. İhtiyaç doğdukça ayrı ayrı değerlendirilebilir — her biri kendi
-ölçeğinde bir tasarım turu gerektirir. Envanterdeki 19 converter'ın
+ölçeğinde bir tasarım turu gerektirir. Envanterdeki 32 converter'ın
 kapsamı (bkz. [[donusturucu-envanteri]]) şu an ana odak.
 
 ## İlgili Sayfalar

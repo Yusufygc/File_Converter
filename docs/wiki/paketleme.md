@@ -91,6 +91,11 @@ dahil hatasız açıldı).
 - **LibreOffice / Microsoft Office paketlenmiyor** — bu harici araçlar
   kullanıcının sisteminde ayrıca kurulu olmalı (bkz. [[test-ve-bagimliliklar]]).
   Paketlenmiş exe yalnızca Python/Qt/PyMuPDF/pdf2docx bağımlılıklarını içerir.
+- **Geç import edilen paketler** (`pymupdf4llm`, `pymupdf_layout`,
+  `openpyxl`, `tabulate`) converter'ların `_do_convert`/`is_available`
+  içinde import edildiği için PyInstaller statik analizde görmez —
+  `fileconvert.spec`'te `collect_submodules` + `collect_data_files` ile
+  açıkça eklenir. Yeni bir geç-import bağımlılık eklenince buraya da eklenmeli.
 - **`.exe` simgesi mevcut** — `assets/icons/app_icon.ico` dosyası
   Windows standardındaki tüm çözünürlükleri (16x16, 24x24, 32x32, 48x48,
   64x64, 128x128, 256x256) içerir; `fileconvert.spec` ve Inno Setup

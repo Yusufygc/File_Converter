@@ -24,6 +24,13 @@ var GLYPHS = {
     image: "",
     table: "",
     document: "",
+    rotate: "",
+    lock: "",
+    unlock: "",
+    repair: "",
+    page_number: "",
+    watermark: "",
+    ocr: "",
 }
 
 function glyph(key) {

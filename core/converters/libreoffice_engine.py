@@ -16,6 +16,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
+from core.errors import ExternalToolError
+
 
 def _profile_dir() -> Path:
     """
@@ -86,8 +88,9 @@ class LibreOfficeEngine:
         stdout = result.stdout
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"LibreOffice hatası (kod {result.returncode}):\n{result.stderr or stdout}"
+            raise ExternalToolError(
+                "LibreOffice dosyayı dönüştüremedi. Dosya bozuk veya parola korumalı olabilir.",
+                detail=f"soffice çıkış kodu {result.returncode}: {result.stderr or stdout}",
             )
 
         lo_out = out_dir / (source_path.stem + f".{ext}")
@@ -97,9 +100,12 @@ class LibreOfficeEngine:
             if fallback.exists() and fallback != lo_out:
                 shutil.move(str(fallback), str(lo_out))
             else:
-                raise FileNotFoundError(
-                    f"Dönüşüm sonrası dosya bulunamadı: {lo_out}\n"
-                    f"LibreOffice çıktısı:\n{stdout}"
+                # FileNotFoundError fırlatılmaz: to_user_error() onu "kaynak dosya
+                # taşınmış" diye yorumlardı, oysa sorun LibreOffice'in çıktısında.
+                raise ExternalToolError(
+                    "LibreOffice dönüşümü bitirdi ama çıktı dosyası oluşmadı. "
+                    "Dosya bu biçime dönüştürülemiyor olabilir.",
+                    detail=f"beklenen çıktı yok: {lo_out} | soffice çıktısı: {stdout}",
                 )
 
         if lo_out != output_path:

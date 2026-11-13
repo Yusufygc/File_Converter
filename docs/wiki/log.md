@@ -4,6 +4,47 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-11-13] [REFACTOR] | Hata mekanizması: UI'dan teknik terimler kaldırıldı
+
+Kullanıcı: "UI'da backend'e ait terimler olmasın, exception mekanizmasını
+düzelt." Yeni `core/errors.py` (`ConversionError` + 9 alt sınıf,
+`to_user_error()`), `core/user_texts.py` (yöntem etiketleri, kurulum
+ipuçları — `pip`/`apt`/`brew`/`winget` komutları kaldırıldı, kütüphane
+adları "Yerleşik" oldu), `core/utils/logging_setup.py` (dönen günlük
+dosyası). `BaseConverter` artık ham `str(exc)` göstermiyor, ön kontrolleri
+de `try` içine aldı (çıktı klasörü hatası toplu işi düşürüyordu).
+Facade'e `_safe_convert()`; paralel mod gerçek hataları yutmuyor.
+Worker'lar hiçbir durumda sinyalsiz bitmiyor. `main.py` traceback yerine
+günlük yolunu gösteriyor. SettingsView: "Motor"→"Yöntem", "DPI"→"Çözünürlük",
+OCR kartı "Metin Tanıma", winget komutu yerine indirme bağlantısı.
+Tüm converter `raise ValueError/RuntimeError` noktaları tipli hatalara
+geçti. Yeni `tests/test_errors.py` (çeviri, facade güvenlik ağı, tüm
+converter metinlerinde teknik terim taraması). Testler: 163 → 210.
+Detay: [[hata-yonetimi]].
+
+## [2026-11-13] [İNGEST] | iLovePDF genişletmesi: 13 yeni converter + genel option şeması
+
+REA ile ilovepdf.com tarandı (31 araç), projeye uyanlar 3 pakette
+eklendi (19 → 32 converter). **Paket 1**: `PptxToOdpConverter`,
+`OdpToPptxConverter`, `OdpToPdfConverter` (`SimpleLibreOfficeConverter`;
+gerçek LO ile gidiş-dönüş doğrulandı). **Paket 2**: `PdfRotateConverter`,
+`PdfPageNumbersConverter`, `PdfWatermarkConverter`, `PdfProtectConverter`,
+`PdfUnlockConverter`, `PdfRepairConverter`, `PdfExtractImagesConverter` —
+ortak `PyMuPdfToolConverter` tabanı. **Mimari karar** (kullanıcı onaylı):
+parametre isteyen araçlar için tipli alan yerine genel şema —
+`IOptionsProvider`/`OptionSpec` (`core/interfaces/option_schema_interface.py`),
+`ConversionOptions.extra`, `BaseConverter`'da zorunlu alan kontrolü,
+bridge'de `optionSpecs`/`setExtraOption`/`_build_options()`, QML'de
+`DynamicOptionField.qml`. Parola değerleri QSettings'e yazılmaz. Sayfa
+aralığı ayrıştırıcısı `core/converters/page_range.py`'ye taşındı.
+**Paket 3**: `PdfOcrConverter` (Aranabilir PDF, `OcrEngine.ocr_page_to_pdf`
+— PyMuPDF `pdfocr` yerine pytesseract'ın PDF çıktısı, tessdata yolu
+gerektirmediği için), `PdfToMarkdownConverter` (`pymupdf4llm==1.27.2.2`),
+`PdfToXlsxConverter` (`find_tables()` + `openpyxl==3.1.5`); spec'e
+geç-import paketleri eklendi. PDF/A ve etkileşimli araçlar bilinçli
+kapsam dışı. Testler: 132 → 163. Detay: [[yol-haritasi]],
+[[donusturucu-envanteri]], [[converter-arayuzu]], [[ui-katmani]].
+
 ## [2026-09-24] [FIX] | PDF→ODT yavaşlığı + dönüştürücü hız denetimi
 
 Kullanıcı: "PDF→ODT çok yavaş" (ders slaytı PDF'lerinde dosya başı ~1 dk).

@@ -1,3 +1,4 @@
+from core.errors import UNEXPECTED_ERROR_MESSAGE
 from core.interfaces.converter_interface import ConversionOptions
 from tests._fakes import FakeConverter
 
@@ -49,7 +50,9 @@ def test_convert_wraps_exception_as_failure(tmp_path):
     result = conv.convert(source, ConversionOptions(output_dir=tmp_path))
 
     assert result.success is False
-    assert "boom" in result.error_message
+    # Ham exception metni ("boom") kullanıcıya gösterilmez; günlüğe gider.
+    assert "boom" not in result.error_message
+    assert result.error_message == UNEXPECTED_ERROR_MESSAGE
     assert result.output_path is None
 
 

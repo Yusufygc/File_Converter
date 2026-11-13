@@ -25,7 +25,18 @@ from typing import List, Optional
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.converters.libreoffice_engine import LibreOfficeEngine
 from core.converters.ocr_engine import OcrEngine
+from core.errors import ConversionError, MissingComponentError
 from core.interfaces.converter_interface import ConversionOptions
+from core.user_texts import (
+    ENGINE_BUILTIN,
+    ENGINE_BUILTIN_WITH_OCR,
+    ENGINE_IMAGE_EMBED,
+    ENGINE_LIBREOFFICE,
+    ENGINE_OCR,
+    ENGINE_UNAVAILABLE,
+    HINT_BUILTIN_MISSING,
+    HINT_LIBREOFFICE,
+)
 from core.utils.pdf_inspector import is_scanned_pdf
 
 
@@ -260,19 +271,11 @@ class PdfToDocxConverter(BaseConverter):
             self._lo_strat.convert(source_path, output_path, ".docx")
             return None
 
-        raise RuntimeError("Uygun bir PDF → DOCX dönüştürücü motor bulunamadı.")
+        raise MissingComponentError()
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "Dönüşüm motoru bulunamadı.\n\n"
-            "Seçenek 1 — pdf2docx (hızlı ve yüksek kaliteli):\n"
-            "  pip install pdf2docx\n\n"
-            "Seçenek 2 — Tesseract OCR (taranmış belgeler için):\n"
-            "  winget install UB-Mannheim.TesseractOCR\n\n"
-            "Seçenek 3 — LibreOffice:\n"
-            "  https://www.libreoffice.org/download"
-        )
+        return HINT_BUILTIN_MISSING
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -303,15 +306,15 @@ class PdfToDocxConverter(BaseConverter):
     def active_engine_name(self) -> str:
         # Dijital PDF'ler her zaman pdf2docx ile dönüşür; OCR yalnızca taranmışlarda devreye girer.
         if self._pdf2docx_strat.is_available():
-            return "pdf2docx + OCR" if self._ocr_strat.is_available() else "pdf2docx"
+            return ENGINE_BUILTIN_WITH_OCR if self._ocr_strat.is_available() else ENGINE_BUILTIN
         names = {
-            PdfConversionEngine.PDF2DOCX:    "pdf2docx",
-            PdfConversionEngine.OCR:         "OCR (Tesseract)",
-            PdfConversionEngine.IMAGE_EMBED: "Görsel Gömme",
-            PdfConversionEngine.LIBREOFFICE: "LibreOffice",
-            PdfConversionEngine.NONE:        "Yok",
+            PdfConversionEngine.PDF2DOCX:    ENGINE_BUILTIN,
+            PdfConversionEngine.OCR:         ENGINE_OCR,
+            PdfConversionEngine.IMAGE_EMBED: ENGINE_IMAGE_EMBED,
+            PdfConversionEngine.LIBREOFFICE: ENGINE_LIBREOFFICE,
+            PdfConversionEngine.NONE:        ENGINE_UNAVAILABLE,
         }
-        return names.get(self.active_engine, "Yok")
+        return names.get(self.active_engine, ENGINE_UNAVAILABLE)
 
     def available_engines(self) -> List[PdfConversionEngine]:
         res = []
@@ -362,7 +365,8 @@ class PdfToOdtConverter(BaseConverter):
         with tempfile.TemporaryDirectory(prefix="fileconvert_") as tmp:
             docx_result = self._to_docx.convert(source_path, ConversionOptions(output_dir=Path(tmp)))
             if not docx_result.success:
-                raise RuntimeError(docx_result.error_message)
+                # Ara adımın mesajı BaseConverter tarafından zaten kullanıcı diline çevrildi.
+                raise ConversionError(docx_result.error_message)
             # LibreOffice çıktıyı kaynak adına göre adlandırır; ara DOCX'in adı hedefle aynı olmalı.
             tmp_docx = docx_result.output_path.rename(Path(tmp) / f"{output_path.stem}.docx")
             self._lo.convert_to(tmp_docx, output_path, "odt")
@@ -370,12 +374,7 @@ class PdfToOdtConverter(BaseConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "LibreOffice kurulu değil.\n\n"
-            "Ubuntu/Debian : sudo apt install libreoffice\n"
-            "macOS         : brew install --cask libreoffice\n"
-            "Windows       : https://www.libreoffice.org/download"
-        )
+        return HINT_LIBREOFFICE
 
     @property
     def is_available(self) -> bool:
@@ -384,5 +383,5 @@ class PdfToOdtConverter(BaseConverter):
     @property
     def active_engine_name(self) -> str:
         if not self.is_available:
-            return "Yok"
-        return f"{self._to_docx.active_engine_name} + LibreOffice"
+            return ENGINE_UNAVAILABLE
+        return f"{self._to_docx.active_engine_name} + {ENGINE_LIBREOFFICE}"

@@ -38,6 +38,14 @@ try:
     hiddenimports += collect_submodules('pdf2docx')
 except Exception:
     pass
+# PDF→Markdown / PDF→Excel converter'ları paketleri _do_convert içinde
+# geç import ettiği için PyInstaller statik analizde göremez.
+for _pkg in ('pymupdf4llm', 'pymupdf_layout', 'openpyxl', 'tabulate'):
+    try:
+        hiddenimports += collect_submodules(_pkg)
+        datas += collect_data_files(_pkg)
+    except Exception:
+        pass
 
 a = Analysis(
     ['main.py'],

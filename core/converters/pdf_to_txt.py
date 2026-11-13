@@ -17,6 +17,12 @@ from core.converters.base import BaseConverter, ConvertOutcome
 from core.converters.ocr_engine import OcrEngine
 from core.interfaces.converter_interface import ConversionOptions
 from core.utils.pdf_inspector import is_scanned_pdf
+from core.user_texts import (
+    ENGINE_BUILTIN,
+    ENGINE_BUILTIN_WITH_OCR,
+    ENGINE_UNAVAILABLE,
+    HINT_BUILTIN_MISSING,
+)
 
 
 class PdfToTxtConverter(BaseConverter):
@@ -83,13 +89,7 @@ class PdfToTxtConverter(BaseConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "Dönüşüm motoru bulunamadı.\n\n"
-            "PyMuPDF (önerilen):\n"
-            "  pip install pymupdf\n\n"
-            "Taranmış PDF'ler için OCR (opsiyonel):\n"
-            "  winget install UB-Mannheim.TesseractOCR"
-        )
+        return HINT_BUILTIN_MISSING
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -106,8 +106,8 @@ class PdfToTxtConverter(BaseConverter):
     @property
     def active_engine_name(self) -> str:
         if self._ocr.is_available():
-            return "PyMuPDF + OCR"
-        return "PyMuPDF" if self.is_available else "Yok"
+            return ENGINE_BUILTIN_WITH_OCR
+        return ENGINE_BUILTIN if self.is_available else ENGINE_UNAVAILABLE
 
     @property
     def is_parallel_safe(self) -> bool:

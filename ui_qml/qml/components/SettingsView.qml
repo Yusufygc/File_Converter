@@ -44,7 +44,7 @@ ScrollView {
                 }
 
                 Text {
-                    text: "Dönüşüm motoru, kalite parametreleri ve OCR yapılandırması"
+                    text: "Dönüştürme yöntemi, kalite ve metin tanıma ayarları"
                     font.family: theme.fontFamily
                     font.pointSize: 9
                     color: theme.textMuted
@@ -59,17 +59,17 @@ ScrollView {
                 color: theme.border
             }
 
-            // ── KART 1: Dönüşüm Motoru ───────────────────────────────
+            // ── KART 1: Dönüştürme Yöntemi ───────────────────────────────
             ModernCard {
                 Layout.fillWidth: true
-                title: "Dönüşüm Motoru"
+                title: "Dönüştürme Yöntemi"
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
 
                     Text {
-                        text: "Motor:"
+                        text: "Yöntem:"
                         font.family: theme.fontFamily
                         font.pointSize: 10
                         color: theme.textSecondary
@@ -169,7 +169,7 @@ ScrollView {
                     spacing: 16
 
                     Text {
-                        text: "DPI:"
+                        text: "Çözünürlük:"
                         font.family: theme.fontFamily
                         font.pointSize: 10
                         color: theme.textSecondary
@@ -227,17 +227,17 @@ ScrollView {
                 }
             }
 
-            // ── KART 3: OCR Motoru Bilgisi ───────────────────────────
+            // ── KART 3: Metin Tanıma ───────────────────────────
             ModernCard {
                 Layout.fillWidth: true
-                title: "OCR (Optik Karakter Tanıma)"
+                title: "Metin Tanıma (Taranmış Belgeler)"
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
 
                     Text {
-                        text: "Tesseract:"
+                        text: "Durum:"
                         font.family: theme.fontFamily
                         font.pointSize: 10
                         color: theme.textSecondary
@@ -265,7 +265,7 @@ ScrollView {
 
                             Text {
                                 text: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ?
-                                      "Tesseract OCR Hazır" : "Tesseract OCR Kurulu Değil"
+                                      "Hazır" : "Kurulu Değil"
                                 font.family: theme.fontFamily
                                 font.pointSize: 9
                                 font.bold: true
@@ -280,8 +280,8 @@ ScrollView {
                     Layout.fillWidth: true
                     Layout.leftMargin: 72
                     text: (typeof bridge !== "undefined" && bridge && bridge.isOcrAvailable) ?
-                          "Taranmış belge PDF'leri dönüştürülürken Türkçe ve İngilizce OCR motoru aktif olarak kullanılacaktır." :
-                          "Taranmış PDF'lerde resimdeki yazıları düzenlenebilir Word metnine dönüştürmek için PowerShell'den kurabilirsiniz:\nwinget install UB-Mannheim.TesseractOCR"
+                          "Taranmış PDF'lerdeki yazılar Türkçe ve İngilizce olarak okunup düzenlenebilir metne dönüştürülecek." :
+                          "Taranmış PDF'lerdeki yazıları okuyabilmek için ücretsiz Tesseract programını kurun:\nhttps://github.com/UB-Mannheim/tesseract/wiki\n(Kurulumda Türkçe dil paketini seçin, ardından uygulamayı yeniden başlatın.)"
                     font.family: theme.fontFamily
                     font.pointSize: 9
                     color: theme.textMuted

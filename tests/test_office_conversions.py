@@ -12,8 +12,11 @@ import pytest
 from core.converters.office_conversions import (
     CsvToXlsxConverter,
     DocxToOdtConverter,
+    OdpToPdfConverter,
+    OdpToPptxConverter,
     OdsToXlsxConverter,
     OdtToDocxConverter,
+    PptxToOdpConverter,
     XlsxToCsvConverter,
     XlsxToOdsConverter,
     XlsxToPdfConverter,
@@ -27,6 +30,9 @@ _CASES = [
     (OdsToXlsxConverter, ".ods", ".xlsx"),
     (DocxToOdtConverter, ".docx", ".odt"),
     (OdtToDocxConverter, ".odt", ".docx"),
+    (PptxToOdpConverter, ".pptx", ".odp"),
+    (OdpToPptxConverter, ".odp", ".pptx"),
+    (OdpToPdfConverter, ".odp", ".pdf"),
 ]
 
 
@@ -62,7 +68,7 @@ def test_is_available_is_bool_and_engine_name_consistent(cls, source_ext, target
     if conv.is_available:
         assert conv.active_engine_name == "LibreOffice"
     else:
-        assert conv.active_engine_name == "Yok"
+        assert conv.active_engine_name == "Kullanılamıyor"
 
 
 @pytest.mark.parametrize("cls,source_ext,target_ext", _CASES)

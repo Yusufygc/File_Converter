@@ -38,7 +38,7 @@ def test_validate_rejects_non_docx(tmp_path):
 def test_is_available_and_engine_name():
     conv = DocxToTxtConverter()
     assert conv.is_available is True
-    assert conv.active_engine_name == "python-docx"
+    assert conv.active_engine_name == "Yerleşik"
 
 
 def test_is_parallel_safe():

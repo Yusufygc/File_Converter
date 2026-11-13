@@ -29,7 +29,7 @@ def test_is_available_is_bool_and_engine_name_consistent():
     if conv.is_available:
         assert conv.active_engine_name == "LibreOffice"
     else:
-        assert conv.active_engine_name == "Yok"
+        assert conv.active_engine_name == "Kullanılamıyor"
 
 
 def test_unavailable_hint_mentions_libreoffice():

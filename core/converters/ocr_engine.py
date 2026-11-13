@@ -127,6 +127,34 @@ class OcrEngine:
         finally:
             doc.close()
 
+    def ocr_page_to_pdf(self, page, dpi: int = 300) -> bytes:
+        """
+        Sayfayı render edip Tesseract'ın kendi PDF çıktısıyla (görsel +
+        görünmez metin katmanı) tek sayfalık bir PDF döndürür.
+
+        PyMuPDF'in `pdfocr_*` API'si yerine bu yol seçildi: o API tessdata
+        klasörünü `TESSDATA_PREFIX` ile ayrıca bulmayı gerektiriyor;
+        pytesseract ise zaten bulunan binary'nin kendi dil dosyalarını kullanır.
+        """
+        import pytesseract
+        from PIL import Image
+
+        pytesseract.pytesseract.tesseract_cmd = self._tesseract_cmd
+
+        pix = page.get_pixmap(dpi=dpi)
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        config = f"--dpi {dpi}"
+        for lang in (self._preferred_lang, "eng", None):
+            try:
+                kwargs = {"extension": "pdf", "config": config}
+                if lang:
+                    kwargs["lang"] = lang
+                return pytesseract.image_to_pdf_or_hocr(img, **kwargs)
+            except Exception:
+                if lang is None:
+                    raise
+        raise RuntimeError("OCR başarısız.")  # pragma: no cover
+
     # ------------------------------------------------------------------ #
     #  OCR → DOCX Belge Üretimi                                          #
     # ------------------------------------------------------------------ #

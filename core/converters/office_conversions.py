@@ -21,6 +21,7 @@ from typing import List, Optional
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.converters.libreoffice_engine import LibreOfficeEngine
 from core.interfaces.converter_interface import ConversionOptions
+from core.user_texts import ENGINE_LIBREOFFICE, ENGINE_UNAVAILABLE, HINT_LIBREOFFICE
 
 
 class SimpleLibreOfficeConverter(BaseConverter):
@@ -56,12 +57,7 @@ class SimpleLibreOfficeConverter(BaseConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "LibreOffice kurulu değil.\n\n"
-            "Ubuntu/Debian : sudo apt install libreoffice\n"
-            "macOS         : brew install --cask libreoffice\n"
-            "Windows       : https://www.libreoffice.org/download"
-        )
+        return HINT_LIBREOFFICE
 
     @property
     def is_available(self) -> bool:
@@ -69,7 +65,7 @@ class SimpleLibreOfficeConverter(BaseConverter):
 
     @property
     def active_engine_name(self) -> str:
-        return "LibreOffice" if self._engine.is_available() else "Yok"
+        return ENGINE_LIBREOFFICE if self._engine.is_available() else ENGINE_UNAVAILABLE
 
 
 # ======================================================================== #
@@ -183,3 +179,49 @@ class OdtToDocxConverter(SimpleLibreOfficeConverter):
     @property
     def display_name(self) -> str:
         return "ODT → Word"
+
+
+# ======================================================================== #
+#  Sunum Ailesi (PowerPoint ↔ ODP)                                          #
+# ======================================================================== #
+
+class PptxToOdpConverter(SimpleLibreOfficeConverter):
+    @property
+    def source_extension(self) -> str:
+        return ".pptx"
+
+    @property
+    def target_extension(self) -> str:
+        return ".odp"
+
+    @property
+    def display_name(self) -> str:
+        return "PowerPoint → ODP"
+
+
+class OdpToPptxConverter(SimpleLibreOfficeConverter):
+    @property
+    def source_extension(self) -> str:
+        return ".odp"
+
+    @property
+    def target_extension(self) -> str:
+        return ".pptx"
+
+    @property
+    def display_name(self) -> str:
+        return "ODP → PowerPoint"
+
+
+class OdpToPdfConverter(SimpleLibreOfficeConverter):
+    @property
+    def source_extension(self) -> str:
+        return ".odp"
+
+    @property
+    def target_extension(self) -> str:
+        return ".pdf"
+
+    @property
+    def display_name(self) -> str:
+        return "ODP → PDF"

@@ -58,4 +58,4 @@ def test_validate_rejects_non_pdf(tmp_path):
 def test_is_available_and_engine_name():
     conv = PdfToPngConverter()
     assert conv.is_available is True
-    assert conv.active_engine_name == "PyMuPDF"
+    assert conv.active_engine_name == "Yerleşik"

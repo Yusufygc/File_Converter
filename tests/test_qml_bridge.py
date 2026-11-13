@@ -120,3 +120,52 @@ def test_app_bridge_categorized_converters(qapp):
             assert "badge" in item
             assert "shortName" in item
 
+
+
+def _select_by_class(bridge, cls_name):
+    for item in bridge.converters:
+        if item["className"] == cls_name:
+            bridge.selectConverter(item["index"])
+            return item
+    raise AssertionError(f"{cls_name} bulunamadı")
+
+
+def test_option_specs_published_and_extra_reaches_options(qapp):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    item = _select_by_class(bridge, "PdfWatermarkConverter")
+    keys = [s["key"] for s in item["optionSpecs"]]
+    assert keys == ["text", "opacity", "font_size"]
+    assert bridge.currentConverter["optionSpecs"][0]["required"] is True
+
+    bridge.setExtraOption("text", "GİZLİ")
+    bridge.setExtraOption("bilinmeyen", "yok sayılır")
+    opts = bridge._build_options()
+    assert opts.extra["text"] == "GİZLİ"
+    assert opts.extra["opacity"] == 30  # şema varsayılanı
+    assert "bilinmeyen" not in opts.extra
+
+
+def test_extra_options_reset_on_converter_change_and_not_persisted(qapp):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    _select_by_class(bridge, "PdfProtectConverter")
+    bridge.setExtraOption("password", "cok-gizli")
+    _select_by_class(bridge, "PdfRotateConverter")
+    assert bridge._build_options().extra == {"angle": 90}
+
+    _select_by_class(bridge, "PdfProtectConverter")
+    assert bridge._build_options().extra == {"password": None}
+    stored = [bridge._settings._qs.value(k) for k in bridge._settings._qs.allKeys()]
+    assert "cok-gizli" not in [str(v) for v in stored]
+
+
+def test_converters_without_schema_publish_empty_specs(qapp):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    item = _select_by_class(bridge, "PdfCompressConverter")
+    assert item["optionSpecs"] == []
+    assert bridge._build_options().extra == {}

@@ -30,6 +30,12 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
   `BaseConverter`'dan türetilir (bkz. [[converter-arayuzu]]) — ortak
   validate/timing/hata-sarmalama mantığı tekrar yazılmaz.
 
+- Kullanıcıya görünen metinler (hata, kurulum ipucu, yöntem etiketi)
+  teknik terim içermez: `_do_convert` kullanıcı hatalarında
+  `core/errors.py`'deki `ConversionError` alt sınıflarını fırlatır, teknik
+  ayrıntı `detail=`/günlüğe gider; etiket ve ipuçları `core/user_texts.py`'den
+  gelir — bkz. [[hata-yonetimi]].
+
 ## Kod Stili
 
 - Her yeni dosyanın docstring'inde hangi SOLID ilkesine hizmet ettiği
@@ -41,9 +47,10 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
 - Type hint'ler kullanılır (`Optional`, `List`, `Path`, dataclass'lar).
 - Değer taşıyan nesneler (`ConversionResult`, `ConversionOptions`,
   `ConvertOutcome`) `@dataclass` olarak tanımlanır.
-- `convert()`/`_do_convert()` içinde hata `Exception` olarak fırlatılır;
-  onu `ConversionResult(success=False, ...)`'a çevirmek `BaseConverter`'ın
-  işidir — UI katmanında dönüşüm mantığı için try/except yazılmaz.
+- `convert()`/`_do_convert()` içinde hata `Exception` olarak fırlatılır
+  (kullanıcının anlaması gereken durumlarda `ConversionError` alt sınıfı);
+  onu kullanıcı mesajlı `ConversionResult(success=False, ...)`'a çevirmek
+  ve günlüğe yazmak `BaseConverter`'ın işidir — UI katmanında dönüşüm mantığı için try/except yazılmaz.
 
 ## Test
 

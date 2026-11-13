@@ -18,6 +18,7 @@ from typing import List, Optional
 
 from core.converters.base import ConvertOutcome, MergeCapableConverter
 from core.interfaces.converter_interface import ConversionOptions
+from core.user_texts import ENGINE_BUILTIN, ENGINE_UNAVAILABLE, HINT_BUILTIN_MISSING
 
 
 class PdfMergeConverter(MergeCapableConverter):
@@ -81,11 +82,7 @@ class PdfMergeConverter(MergeCapableConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "Dönüşüm motoru bulunamadı.\n\n"
-            "PyMuPDF (önerilen):\n"
-            "  pip install pymupdf"
-        )
+        return HINT_BUILTIN_MISSING
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -101,7 +98,7 @@ class PdfMergeConverter(MergeCapableConverter):
 
     @property
     def active_engine_name(self) -> str:
-        return "PyMuPDF" if self.is_available else "Yok"
+        return ENGINE_BUILTIN if self.is_available else ENGINE_UNAVAILABLE
 
     @property
     def is_parallel_safe(self) -> bool:

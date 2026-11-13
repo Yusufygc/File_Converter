@@ -120,6 +120,31 @@ ColumnLayout {
                         }
                     }
                 }
+
+                // Üçüncü Satır: Araca Özgü Parametreler (IOptionsProvider)
+                // Converter değişince model yenilenir, alanlar şema varsayılanlarıyla
+                // yeniden çizilir — bridge tarafı da aynı anda varsayılana döner.
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 16
+                    visible: (typeof bridge !== "undefined" && bridge && bridge.currentConverter && bridge.currentConverter.optionSpecs) ?
+                             bridge.currentConverter.optionSpecs.length > 0 : false
+
+                    Repeater {
+                        model: (typeof bridge !== "undefined" && bridge && bridge.currentConverter) ?
+                               (bridge.currentConverter.optionSpecs || []) : []
+
+                        DynamicOptionField {
+                            spec: modelData
+                            fieldEnabled: typeof bridge !== "undefined" && bridge && !bridge.isConverting
+                            onValueEdited: function(key, value) {
+                                if (typeof bridge !== "undefined" && bridge) {
+                                    bridge.setExtraOption(key, value)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

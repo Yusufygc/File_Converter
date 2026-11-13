@@ -12,17 +12,22 @@ SRP : Ortak dönüşüm akışından sorumlu, dönüşümün kendisinden değil.
 
 from __future__ import annotations
 
+import logging
 import time
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
+from core.errors import is_unexpected, to_user_error
 from core.interfaces.converter_interface import (
     ConversionOptions,
     ConversionResult,
     IConverter,
 )
+from core.interfaces.option_schema_interface import IOptionsProvider
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,28 +58,30 @@ class BaseConverter(IConverter):
     ) -> ConversionResult:
         start = time.monotonic()
 
-        if not self.validate(source_path):
+        def fail(message: str) -> ConversionResult:
             return ConversionResult(
                 source_path=source_path,
                 output_path=None,
                 success=False,
-                error_message=f"Geçersiz dosya: {source_path.name}",
+                error_message=message,
                 elapsed_seconds=time.monotonic() - start,
             )
 
-        if not self.is_available:
-            return ConversionResult(
-                source_path=source_path,
-                output_path=None,
-                success=False,
-                error_message=self.unavailable_hint,
-                elapsed_seconds=time.monotonic() - start,
-            )
-
-        output_path = self.get_output_path(source_path, options)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
+        # Ön kontroller dahil her şey try içinde: çıktı klasörü oluşturma
+        # (izin yok, disk dolu) gibi hatalar önceden yakalanmıyor, toplu
+        # dönüşümü yarıda kesip UI'ı "dönüştürülüyor" durumunda bırakıyordu.
         try:
+            if not self.validate(source_path):
+                return fail(f"Geçersiz dosya: {source_path.name}")
+            if not self.is_available:
+                return fail(self.unavailable_hint)
+            missing = self._missing_required_options(options)
+            if missing:
+                return fail(f"Zorunlu alan boş: {missing}")
+
+            output_path = self.get_output_path(source_path, options)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
             outcome = self._do_convert(source_path, output_path, options) or ConvertOutcome()
             return ConversionResult(
                 source_path=source_path,
@@ -84,13 +91,35 @@ class BaseConverter(IConverter):
                 elapsed_seconds=time.monotonic() - start,
             )
         except Exception as exc:
-            return ConversionResult(
-                source_path=source_path,
-                output_path=None,
-                success=False,
-                error_message=str(exc),
-                elapsed_seconds=time.monotonic() - start,
-            )
+            return fail(self._user_error_message(exc, source_path))
+
+    def _user_error_message(self, exc: Exception, source_path: Path) -> str:
+        """
+        Exception'ı kullanıcı mesajına çevirir, teknik ayrıntıyı günlüğe yazar.
+        `str(exc)` artık hiçbir zaman doğrudan UI'a gitmez (bkz. core/errors.py).
+        """
+        error = to_user_error(exc)
+        context = f"{self.__class__.__name__} [{source_path.name}]"
+        if is_unexpected(error):
+            _log.error("%s: beklenmeyen hata", context, exc_info=exc)
+        elif error.detail:
+            _log.warning("%s: %s | %s", context, error.user_message, error.detail)
+        else:
+            _log.info("%s: %s", context, error.user_message)
+        return error.user_message
+
+    def _missing_required_options(self, options: ConversionOptions) -> str:
+        """
+        `IOptionsProvider` şemasındaki `required` alanlardan boş olanın
+        etiketini döner (yoksa ""). Bu kontrol dosya başına `_do_convert`
+        içinde ayrı ayrı yazılmasın diye şablon metotta tek yerde yapılır.
+        """
+        if not isinstance(self, IOptionsProvider):
+            return ""
+        for spec in self.option_specs:
+            if spec.required and options.get_extra(spec.key) is None:
+                return spec.label
+        return ""
 
     # ------------------------------------------------------------------ #
     #  Alt sınıfların implemente etmesi gereken hook'lar                   #
@@ -158,11 +187,11 @@ class MergeCapableConverter(BaseConverter):
                 elapsed_seconds=time.monotonic() - start,
             )
 
-        out_dir = options.output_dir or valid[0].parent
-        output_path = out_dir / f"{valid[0].stem}_birlesik{self.target_extension}"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
         try:
+            out_dir = options.output_dir or valid[0].parent
+            output_path = out_dir / f"{valid[0].stem}_birlesik{self.target_extension}"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
             outcome = self._do_convert_many(valid, output_path, options) or ConvertOutcome()
             return ConversionResult(
                 source_path=valid[0],
@@ -176,7 +205,7 @@ class MergeCapableConverter(BaseConverter):
                 source_path=valid[0],
                 output_path=None,
                 success=False,
-                error_message=str(exc),
+                error_message=self._user_error_message(exc, valid[0]),
                 elapsed_seconds=time.monotonic() - start,
             )
 

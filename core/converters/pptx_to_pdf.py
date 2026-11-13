@@ -22,8 +22,16 @@ from typing import List, Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.converters.libreoffice_engine import LibreOfficeEngine
+from core.errors import ExternalToolError
 from core.interfaces.converter_interface import ConversionOptions
 from core.interfaces.engine_interface import IEngineSelectable
+from core.user_texts import (
+    ENGINE_LIBREOFFICE,
+    ENGINE_MS_OFFICE,
+    ENGINE_UNAVAILABLE,
+    HINT_LIBREOFFICE,
+    HINT_OFFICE_OR_LIBREOFFICE,
+)
 
 
 # ======================================================================== #
@@ -65,9 +73,7 @@ class _ConversionStrategy(ABC):
 class _MsOfficeStrategy(_ConversionStrategy):
     """
     PowerPoint COM otomasyonu ile dönüştürür.
-    Gereksinim: Windows + Microsoft Office kurulu + pywin32
-
-    pip install pywin32
+    Gereksinim: Windows + Microsoft Office kurulu + pywin32 (exe ile paketlenir).
     """
 
     # PowerPoint.SaveAs formatı: 32 = ppSaveAsPDF
@@ -103,6 +109,14 @@ class _MsOfficeStrategy(_ConversionStrategy):
                 str(output_path.resolve()),
                 self._PP_SAVE_AS_PDF,
             )
+        except Exception as exc:
+            # COM hataları (pywintypes.com_error) HRESULT kodlu, İngilizce ve
+            # kullanıcıya anlamsız; ayrıntı yalnızca günlüğe gider.
+            raise ExternalToolError(
+                "Microsoft PowerPoint sunumu dönüştüremedi. Dosya bozuk veya "
+                "parola korumalı olabilir; LibreOffice yöntemini de deneyebilirsiniz.",
+                detail=f"{type(exc).__name__}: {exc}",
+            ) from exc
         finally:
             if presentation is not None:
                 try:
@@ -207,9 +221,9 @@ class PptxToPdfConverter(BaseConverter, IEngineSelectable):
     @property
     def active_engine_name(self) -> str:
         return {
-            ConversionEngine.MS_OFFICE:   "Microsoft Office",
-            ConversionEngine.LIBREOFFICE: "LibreOffice",
-            ConversionEngine.NONE:        "Yok",
+            ConversionEngine.MS_OFFICE:   ENGINE_MS_OFFICE,
+            ConversionEngine.LIBREOFFICE: ENGINE_LIBREOFFICE,
+            ConversionEngine.NONE:        ENGINE_UNAVAILABLE,
         }[self.active_engine]
 
     def available_engines(self) -> List[ConversionEngine]:
@@ -246,17 +260,7 @@ class PptxToPdfConverter(BaseConverter, IEngineSelectable):
 
     @staticmethod
     def _no_engine_message() -> str:
+        # Windows dışında Microsoft Office stratejisi hiç kullanılamaz.
         if sys.platform == "win32":
-            return (
-                "Dönüşüm motoru bulunamadı.\n\n"
-                "Seçenek 1 — Microsoft Office (önerilen):\n"
-                "  Office kuruluysa: pip install pywin32\n\n"
-                "Seçenek 2 — LibreOffice (ücretsiz):\n"
-                "  https://www.libreoffice.org/download"
-            )
-        return (
-            "LibreOffice bulunamadı.\n\n"
-            "Ubuntu/Debian : sudo apt install libreoffice\n"
-            "macOS         : brew install --cask libreoffice\n"
-            "  veya        : https://www.libreoffice.org/download"
-        )
+            return HINT_OFFICE_OR_LIBREOFFICE
+        return HINT_LIBREOFFICE

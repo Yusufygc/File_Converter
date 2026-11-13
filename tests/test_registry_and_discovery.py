@@ -60,10 +60,24 @@ def test_discovery_finds_all_shipped_converters():
         "XlsxToOdsConverter",
         "OdsToXlsxConverter",
         "JpgToPdfConverter",
+        "PptxToOdpConverter",
+        "OdpToPptxConverter",
+        "OdpToPdfConverter",
+        "PdfRotateConverter",
+        "PdfPageNumbersConverter",
+        "PdfWatermarkConverter",
+        "PdfProtectConverter",
+        "PdfUnlockConverter",
+        "PdfRepairConverter",
+        "PdfExtractImagesConverter",
+        "PdfOcrConverter",
+        "PdfToMarkdownConverter",
+        "PdfToXlsxConverter",
     }
     # SimpleLibreOfficeConverter (soyut taban) kesinlikle keşfedilen
     # listede olmamalı — bkz. office_conversions.py.
     assert "SimpleLibreOfficeConverter" not in names
+    assert "PyMuPdfToolConverter" not in names
 
 
 def test_register_all_populates_registry_without_duplicates():

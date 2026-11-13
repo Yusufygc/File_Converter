@@ -26,12 +26,12 @@ class DocxToPdfConverter(BaseConverter):
     @property
     def is_available(self) -> bool: return True
     @property
-    def active_engine_name(self) -> str: return "libreoffice"
+    def active_engine_name(self) -> str: return ENGINE_LIBREOFFICE   # core/user_texts.py
     @property
-    def unavailable_hint(self) -> str: return "pip install ..."
+    def unavailable_hint(self) -> str: return HINT_LIBREOFFICE       # core/user_texts.py
 
     def _do_convert(self, source_path: Path, output_path: Path, options: ConversionOptions) -> Optional[ConvertOutcome]:
-        ...  # asıl dönüşüm mantığı; hata durumunda Exception fırlat
+        ...  # asıl dönüşüm mantığı; kullanıcı hatasında core/errors.py sınıfını fırlat
         return None
 ```
 
@@ -51,6 +51,26 @@ Sıra `app_bridge.py`'deki `_PREFERRED_ORDER` listesinden gelir. Bu
 alfabetik olarak sona eklenir, yani bu adımı atlasan da converter doğru
 çalışır, yalnızca dropdown'da en sonda görünür. İstersen
 `(source_ext, target_ext)` çiftini oraya da ekleyebilirsin.
+
+## Hata ve Kullanıcı Metinleri
+
+`unavailable_hint`/`active_engine_name` için kendi metnini yazma —
+`core/user_texts.py` sabitlerini (`HINT_BUILTIN_MISSING`, `HINT_LIBREOFFICE`,
+`ENGINE_BUILTIN`...) kullan. `_do_convert` içinde kullanıcı hatalarında
+`core/errors.py`'deki sınıfları fırlat (`InvalidOptionError`,
+`NothingToConvertError`, `PasswordProtectedError`...). Ayrıntı: [[hata-yonetimi]].
+
+## Kullanıcıdan Parametre Gerekiyorsa
+
+Araç kullanıcıdan açı, parola, metin gibi bir değer istiyorsa
+`ConversionOptions`'a alan veya QML'e kontrol **ekleme**: `IOptionsProvider`'ı
+implemente edip `option_specs` ile `OptionSpec` listesi döndür, değeri
+`_do_convert` içinde `options.get_extra(key, default)` ile oku. UI alanları
+otomatik çizer (bkz. [[converter-arayuzu]], [[ui-katmani]]).
+`.pdf`→`.pdf` bir PyMuPDF aracıysa `PyMuPdfToolConverter`'dan türetip
+yalnızca `output_suffix` ver — `PdfRotateConverter` örnek alınabilir.
+Bu tür araçların kategori ikonu uzantıdan çıkarılamadığı için
+`app_bridge.py`'deki `_PDF_TOOL_META`'ya da bir satır eklenir.
 
 ## Birden Fazla Motor Gerekiyorsa
 

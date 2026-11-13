@@ -14,6 +14,7 @@ bkz. proje kökündeki `CLAUDE.md`.
 - [[converter-ekleme]] — yeni dönüşüm türü ekleme rehberi (tak-çıkar mimari)
 - [[donusturucu-envanteri]] — mevcut converter'ların tablosu (motor, davranış)
 - [[libreoffice-motoru]] — paylaşılan `LibreOfficeEngine`, `--infilter` gerekliliği
+- [[hata-yonetimi]] — `ConversionError` hiyerarşisi, kullanıcı metinleri, günlük dosyası
 
 ## UI Katmanı
 

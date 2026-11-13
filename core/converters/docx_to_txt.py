@@ -18,6 +18,7 @@ from typing import Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.interfaces.converter_interface import ConversionOptions
+from core.user_texts import ENGINE_BUILTIN, ENGINE_UNAVAILABLE, HINT_BUILTIN_MISSING
 
 
 class DocxToTxtConverter(BaseConverter):
@@ -55,11 +56,7 @@ class DocxToTxtConverter(BaseConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "Dönüşüm motoru bulunamadı.\n\n"
-            "python-docx (önerilen):\n"
-            "  pip install python-docx"
-        )
+        return HINT_BUILTIN_MISSING
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -75,7 +72,7 @@ class DocxToTxtConverter(BaseConverter):
 
     @property
     def active_engine_name(self) -> str:
-        return "python-docx" if self.is_available else "Yok"
+        return ENGINE_BUILTIN if self.is_available else ENGINE_UNAVAILABLE
 
     @property
     def is_parallel_safe(self) -> bool:

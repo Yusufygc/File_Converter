@@ -76,7 +76,10 @@ her push'ta otomatik doğrular (bkz. [[mimari]]).
 ## Python Bağımlılıkları
 
 - `requirements.txt` — çalışma zamanı: `PySide6`, `pdf2docx`, `PyMuPDF`,
-  `python-docx`, `pywin32` (yalnızca `sys_platform == "win32"`).
+  `pymupdf4llm` (PDF→Markdown; sürümü PyMuPDF ile **birebir aynı**
+  sabitlenir, `pymupdf_layout` + `tabulate`'i de çeker), `openpyxl`
+  (PDF→Excel), `python-docx`, `pytesseract`, `Pillow`, `pywin32`
+  (yalnızca `sys_platform == "win32"`).
 - `requirements-dev.txt` — `requirements.txt` + `pytest` + `pyinstaller`
   (bkz. [[paketleme]]).
 
@@ -104,6 +107,8 @@ pip install -r requirements-dev.txt    # geliştirmek/test için
   `PdfToDocxConverter`/`PdfToTxtConverter` OCR'siz (görsel gömme/motor
   hatası) yoluna düşer. Türkçe dil paketi (`tur.traineddata`) varsayılan
   kurulumda **gelmez** — eklenmezse `OcrEngine` otomatik `eng`'e düşer.
+  `PdfOcrConverter` (Aranabilir PDF) ise Tesseract olmadan hiç çalışmaz
+  (`is_available` `False`); testi Tesseract yoksa `pytest.skip` eder.
 
 PyMuPDF ve pdf2docx saf Python paketleri olduğu için harici kurulum
 gerektirmez — `pip install`'la gelir.

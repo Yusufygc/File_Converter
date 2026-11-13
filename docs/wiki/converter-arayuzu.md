@@ -56,6 +56,12 @@ dosya uzantısını kontrol eder — her converter'da ayrı ayrı yazılmaz.
 Şu an tüm converter'lar (bkz. [[donusturucu-envanteri]]) `BaseConverter`
 veya onu extend eden `MergeCapableConverter`'dan türer.
 
+Hata akışı: `convert()`/`convert_many()` ön kontroller dahil her adımı
+`try` içinde yapar; yakalanan exception `core/errors.py`
+`to_user_error()` ile kullanıcı mesajına çevrilir, teknik ayrıntı
+günlüğe yazılır — `error_message` hiçbir zaman ham `str(exc)` değildir
+(bkz. [[hata-yonetimi]]).
+
 ## `IEngineSelectable` (opsiyonel capability)
 
 `core/interfaces/engine_interface.py`. `typing.Protocol` (yapısal/duck-typing
@@ -115,7 +121,9 @@ parse_page_range(page_range: str, page_count: int) -> List[int]
 UI, bir converter'ın sayfa aralığı girişi sunup sunmadığını
 `isinstance(converter, IPageRangeSelectable)` ile anlar — options
 panelinde "Aralık:" alanı olarak görünür (bkz. [[ui-katmani]]). Şu an
-yalnızca `PdfSplitConverter` implemente eder: `page_range` boşsa
+`PdfSplitConverter`, `PdfRotateConverter` ve `PdfToMarkdownConverter`
+implemente eder (ortak ayrıştırıcı: `core/converters/page_range.py`
+`parse_page_range()`). `PdfSplitConverter` için: `page_range` boşsa
 (`ConversionOptions.page_range is None`) tüm sayfalar bölünür (eski
 davranış), doluysa yalnızca `parse_page_range()`'in döndürdüğü sayfa
 numaraları — kaynaktaki gerçek numarasıyla — ayrı dosyalara yazılır.
@@ -123,6 +131,35 @@ numaraları — kaynaktaki gerçek numarasıyla — ayrı dosyalara yazılır.
 `ValueError` fırlatır; bu, `BaseConverter.convert()`'ın var olan
 try/except'i tarafından yakalanıp `ConversionResult.error_message`'a
 dönüşür — ayrı bir hata yolu eklenmedi.
+
+## `IOptionsProvider` + `OptionSpec` (opsiyonel capability)
+
+`core/interfaces/option_schema_interface.py`. Araca özgü kullanıcı
+parametresi isteyen converter'lar (PDF Döndür, Sayfa Numarası, Filigran,
+Şifrele, Şifre Kaldır) her parametre için `ConversionOptions`'a ayrı bir
+alan + bridge property + QML kontrolü eklemek yerine **şema bildirir**:
+
+```python
+@property
+def option_specs(self) -> List[OptionSpec]:
+    return [OptionSpec(key="angle", label="Açı", kind="choice", default=90,
+                       choices=[(90, "90° saat yönü"), (180, "180°"), (270, "90° saat tersi")])]
+```
+
+- `OptionSpec.kind`: `text` | `password` | `choice` | `int` (`OPTION_KINDS`).
+  Yeni tür eklenirse `ui_qml/qml/components/DynamicOptionField.qml` da güncellenir.
+- Değerler `ConversionOptions.extra: Dict[str, Any]` ile taşınır;
+  converter `options.get_extra(key, default)` ile okur (boş string ve
+  `None` "yok" sayılır).
+- `required=True` alanlar `BaseConverter.convert()` içinde
+  (`_missing_required_options()`) `_do_convert`'ten **önce** kontrol
+  edilir — "Zorunlu alan boş: Parola" hata sonucu; her converter'da tekrar yazılmaz.
+- UI tarafı: [[ui-katmani]] — `optionSpecs` + `setExtraOption()`.
+
+Karar (2026-11-13, kullanıcı onaylı): tipli alan yerine genel şema —
+yeni parametreli araç eklemek UI kodu gerektirmez (OCP). Ortak/çok
+converter'ın kullandığı değerler (`dpi`, `quality`, `page_range`)
+tipli alan olarak kalır; `extra` yalnızca tek araca özgü değerler için.
 
 ## Factory-Tarzı Taban Sınıflar: "Abstract Kalarak Keşiften Kaçınma"
 
@@ -150,9 +187,17 @@ edilebilir taban sınıf yazarken, `source_extension`/`target_extension`/
 discovery bunu somut bir converter sanıp `cls()` ile örneklemeye
 çalışır ve çöker.**
 
+İkinci örnek: `core/converters/pymupdf_tool_base.py` `PyMuPdfToolConverter` —
+`.pdf`→`.pdf` PyMuPDF araçlarının (Döndür, Sayfa No, Filigran, Şifrele,
+Şifre Kaldır, Onar, Aranabilir PDF, Görsel Çıkar) motor tespiti, kurulum
+ipucu, `is_parallel_safe=True` ve sonekli çıktı yolu (`output_suffix`
+sınıf niteliği, örn. `_dondurulmus`) — kaynak ile hedef uzantı aynı
+olduğunda sonek olmadan kaynağın üzerine yazılırdı.
+
 ## Value Object'ler
 
-- `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True, page_range=None)` —
+- `ConversionOptions(output_dir, dpi=150, quality=90, overwrite_existing=True, page_range=None, extra={})` —
+  `extra` araca özgü `IOptionsProvider` değerleri (yukarıya bkz.);
   `dpi` LibreOffice render'ı ve PDF→JPG rasterizasyon çözünürlüğü için;
   `quality` yalnızca PDF→JPG'nin JPEG sıkıştırması için kullanılır;
   `page_range` yalnızca `IPageRangeSelectable` destekleyen converter'lar

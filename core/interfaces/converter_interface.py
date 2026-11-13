@@ -9,7 +9,7 @@ SOLID Principles:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -20,12 +20,23 @@ class ConversionOptions:
     quality: int = 90
     overwrite_existing: bool = True
     page_range: Optional[str] = None
+    # Araca özgü parametreler (`IOptionsProvider.option_specs` anahtarları).
+    # Ortak alanlar yukarıda tipli kalır; yalnızca tek bir converter'ın
+    # kullandığı değerler buraya düşer — bkz. docs/wiki/converter-arayuzu.md.
+    extra: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.dpi < 72 or self.dpi > 600:
             raise ValueError("DPI değeri 72-600 arasında olmalıdır.")
         if self.quality < 1 or self.quality > 100:
             raise ValueError("Kalite değeri 1-100 arasında olmalıdır.")
+
+    def get_extra(self, key: str, default: Any = None) -> Any:
+        """`extra`'dan değer okur; anahtar yoksa veya değer `None`/boşsa `default`."""
+        value = self.extra.get(key)
+        if value is None or value == "":
+            return default
+        return value
 
 
 @dataclass

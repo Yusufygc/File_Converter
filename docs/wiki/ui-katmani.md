@@ -24,6 +24,17 @@ Composition root / controller; `QObject` türevi, `Property`/`Signal`/
   property'lerini birlikte günceller (`kind`: `neutral`/`success`/
   `warning`) — `FooterBar.qml` bunu renklendirmede kullanır, emoji
   gerekmez.
+- **Araca özgü seçenekler** ([[converter-arayuzu]] `IOptionsProvider`):
+  converter sözlüklerinde (`converters`, `categorizedConverters`,
+  `currentConverter`) `optionSpecs` listesi yayınlanır; QML her alan
+  değiştiğinde `setExtraOption(key, value)` çağırır (şemada olmayan
+  anahtarlar yok sayılır). `_extra_options` converter değişiminde ve
+  açılışta şema varsayılanlarına döner, `_build_options()` bunu
+  `ConversionOptions.extra`'ya kopyalar. **Parola dahil bu değerler
+  bilinçli olarak QSettings'e yazılmaz.**
+- `.pdf`→`.pdf` araçları uzantıdan ayırt edilemediği için kısa ad/ikon
+  `_PDF_TOOL_META` sözlüğünden (sınıf adı → (kısa ad, ikon)) gelir;
+  `PdfExtractImagesConverter` `images` kategorisine düşer.
 - **Ayarlar**: `QmlAppSettings` üzerinden tema/çıktı klasörü/kalite
   ayarlarını kalıcı saklar.
 
@@ -91,6 +102,12 @@ gösterir.
 - `MainCanvas.qml` / `OptionsCard.qml` — dönüşüm seçenekleri + büyük
   CTA butonu (`bridge.isConverting`'e göre `convert`/`cancel` glyph +
   "Dönüştür"/"İptal Et" metni).
+- `DynamicOptionField.qml` — tek bir `OptionSpec`'i `kind`'a göre
+  `ModernTextField` (password: `echoMode: Password`), `ModernComboBox`
+  veya `ModernSpinBox` olarak çizer. `MainCanvas.qml`'de seçenek kartının
+  üçüncü satırında `Repeater { model: currentConverter.optionSpecs }`
+  içinde kullanılır; converter değişince alanlar yeniden çizilir.
+  (`OptionsCard.qml` hiçbir yerde örneklenmiyor — yeni alanlar oraya eklenmedi.)
 - `FileListView.qml` — dosya listesi, boş durum ikonu (`folder_open`),
   satır-bazlı sil butonu (`cancel`).
 - `SettingsView.qml` — motor seçimi (`ModernComboBox` + `engineList`),

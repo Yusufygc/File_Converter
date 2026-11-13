@@ -15,6 +15,7 @@ from typing import Optional
 from core.converters.base import BaseConverter, ConvertOutcome
 from core.converters.libreoffice_engine import LibreOfficeEngine
 from core.interfaces.converter_interface import ConversionOptions
+from core.user_texts import ENGINE_LIBREOFFICE, ENGINE_UNAVAILABLE, HINT_LIBREOFFICE
 
 
 class DocxToPdfConverter(BaseConverter):
@@ -54,12 +55,7 @@ class DocxToPdfConverter(BaseConverter):
 
     @property
     def unavailable_hint(self) -> str:
-        return (
-            "LibreOffice kurulu değil.\n\n"
-            "Ubuntu/Debian : sudo apt install libreoffice\n"
-            "macOS         : brew install --cask libreoffice\n"
-            "Windows       : https://www.libreoffice.org/download"
-        )
+        return HINT_LIBREOFFICE
 
     # ------------------------------------------------------------------ #
     #  Public helpers                                                      #
@@ -71,4 +67,4 @@ class DocxToPdfConverter(BaseConverter):
 
     @property
     def active_engine_name(self) -> str:
-        return "LibreOffice" if self._engine.is_available() else "Yok"
+        return ENGINE_LIBREOFFICE if self._engine.is_available() else ENGINE_UNAVAILABLE
