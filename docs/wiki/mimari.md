@@ -54,8 +54,10 @@ imzaları değişmedi.
 
 ## Veri Akışı (bir dönüşüm isteği)
 
-1. Kullanıcı `CategorySidebar`/`OptionsCard`'daki dropdown'dan bir
-   converter seçer → QML `bridge.selectConverter(index)` çağırır.
+1. Kullanıcı `CategorySidebar`'dan bir converter seçer → QML
+   `bridge.selectConverter(index)` çağırır; ya da önce dosya bırakır →
+   `AppBridge._add_paths()` dosya türüne uygun ilk aracı kendisi seçer
+   (dosya-önce akışı, bkz. [[ui-katmani]]).
 2. `AppBridge.selectConverter()` bunu `self._active_index`/
    `self._active_converter` yapar, `currentConverterChanged` sinyaliyle
    QML'e bildirir; `DropZoneWidget`'ın kabul ettiği uzantılar,

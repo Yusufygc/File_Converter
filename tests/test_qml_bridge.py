@@ -103,12 +103,10 @@ def test_app_bridge_categorized_converters(qapp):
 
     bridge = AppBridge()
     cats = bridge.categorizedConverters
-    assert len(cats) == 4
-    cat_ids = [c["id"] for c in cats]
-    assert "documents" in cat_ids
-    assert "spreadsheets" in cat_ids
-    assert "images" in cat_ids
-    assert "pdf_tools" in cat_ids
+    # Niyete göre 5 grup, katalog sırasıyla; "Diğer" yalnızca kataloğa girmemiş converter varsa çıkar
+    assert [c["id"] for c in cats] == ["to_pdf", "from_pdf", "pdf_edit", "pdf_secure", "office"]
+    from_pdf = next(c for c in cats if c["id"] == "from_pdf")
+    assert all(item["sourceExt"] == ".pdf" for item in from_pdf["items"])
 
     total_items = sum(len(c["items"]) for c in cats)
     assert total_items == len(bridge.converters)
@@ -169,3 +167,72 @@ def test_converters_without_schema_publish_empty_specs(qapp):
     item = _select_by_class(bridge, "PdfCompressConverter")
     assert item["optionSpecs"] == []
     assert bridge._build_options().extra == {}
+
+
+
+# ── Dosya-önce akışı ─────────────────────────────────────────────────
+
+def _touch(tmp_path, name):
+    path = tmp_path / name
+    path.write_bytes(b"x")
+    return path
+
+
+def test_dropping_incompatible_file_selects_first_matching_tool(qapp, tmp_path):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    _select_by_class(bridge, "DocxToPdfConverter")
+    bridge.addFilesFromUrls([str(_touch(tmp_path, "a.pdf"))])
+
+    assert bridge.currentConverter["className"] == "PdfToDocxConverter"  # katalogda .pdf kabul eden ilk araç
+    assert bridge.fileCount == 1
+    assert bridge.fileTypeFilter == ".pdf" and bridge.fileTypeLabel == "PDF"
+
+
+def test_compatible_tool_switch_keeps_files_incompatible_clears(qapp, tmp_path):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    bridge.clearFiles()
+    bridge.addFilesFromUrls([str(_touch(tmp_path, "a.pdf")), str(_touch(tmp_path, "b.pdf"))])
+    _select_by_class(bridge, "PdfMergeConverter")
+    assert bridge.fileCount == 2  # PDF aracından PDF aracına geçiş listeyi boşaltmaz
+
+    _select_by_class(bridge, "XlsxToCsvConverter")
+    assert bridge.fileCount == 0 and bridge.fileTypeFilter == ""
+
+
+def test_mixed_drop_keeps_majority_type_and_reports_rest(qapp, tmp_path):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    bridge.clearFiles()
+    files = [_touch(tmp_path, n) for n in ("a.pdf", "b.pdf", "c.pdf", "d.docx", "e.docx", "f.zip")]
+    bridge.addFilesFromUrls([str(f) for f in files])
+
+    assert bridge.fileTypeFilter == ".pdf" and bridge.fileCount == 3
+    assert bridge.statusKind == "warning"
+    assert "Word" in bridge.statusMessage and "desteklenmeyen" in bridge.statusMessage
+
+
+def test_existing_list_type_wins_over_new_majority(qapp, tmp_path):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    bridge.clearFiles()
+    bridge.addFilesFromUrls([str(_touch(tmp_path, "a.pdf"))])
+    bridge.addFilesFromUrls([str(_touch(tmp_path, n)) for n in ("x.docx", "y.docx")])
+
+    assert bridge.fileTypeFilter == ".pdf" and bridge.fileCount == 1
+
+
+def test_jpeg_and_jpg_are_the_same_type(qapp, tmp_path):
+    from ui_qml.bridge.app_bridge import AppBridge
+
+    bridge = AppBridge()
+    bridge.clearFiles()
+    bridge.addFilesFromUrls([str(_touch(tmp_path, "a.jpeg")), str(_touch(tmp_path, "b.JPG"))])
+
+    assert bridge.currentConverter["className"] == "JpgToPdfConverter"
+    assert bridge.fileCount == 2 and bridge.fileTypeFilter == ".jpg"

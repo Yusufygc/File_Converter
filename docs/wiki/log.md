@@ -4,6 +4,21 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-11-13] [REFACTOR] | Kenar çubuğu: niyete göre gruplar + dosya-önce akışı
+
+Sorun: 4 grup iki eksene dağılmıştı (Belgeler/Tablolar/Görseller = tür,
+PDF Araçları = işlem); PDF ile başlayan iş 4 grupta aranıyordu, "Belgeler"
+ve "PDF Araçları" 11'er öğeydi, gruplama sınıf adı `if` zinciriyle
+yapılıyordu. Yeni `ui_qml/bridge/converter_catalog.py`: niyete göre 5 grup
+(PDF'e Dönüştür 5, PDF'ten Dönüştür 8, PDF Düzenle 5, Güvenlik ve Bakım 5,
+Ofis Biçimleri 9), tek tablo; `_PREFERRED_ORDER`, `_PDF_TOOL_META`,
+`_categorize_converter` kaldırıldı. Dosya-önce akışı (kullanıcı kararları):
+uyumsuz dosya bırakılınca uygun ilk araç otomatik seçilir; karışık türde
+çoğunluk türü alınır, kalanlar durum çubuğunda bildirilir; uyumlu araca
+geçişte liste korunur; kenar çubuğu dosya türüne süzülür. Akordeon tek grup
+açık. Kural değişti: yeni converter katalog tablosuna bir satır ekler
+([[rules]]). Testler 250 → 259. Detay: [[ui-katmani]].
+
 ## [2026-11-13] [İNGEST] | Prod hazırlığı: kararlı exe, sürüm sistemi, uygulama içi güncelleme
 
 Kaynak: `D002-HazirPromptlar/Prod hazırlığı/` (exe-dagitim-rehberi, surum-yayinlama,

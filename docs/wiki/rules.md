@@ -16,10 +16,11 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
   import etmez. Bu, `tests/test_00_core_has_no_qt_dependency.py` ile
   otomatik doğrulanır — bu testi geçmeyen bir değişiklik mimariyi bozmuş demektir.
 - Yeni bir dönüşüm türü `core/converters/`'a **tek dosya** eklenerek
-  tanımlanır ([[converter-ekleme]]); `ui_qml/bridge/app_bridge.py`'ye
-  elle kayıt/dropdown-item eklenmez — `discovery.py` ve
-  `AppBridge._categorize_converter()`'ın kural-tabanlı (sınıf adı/uzantı)
-  kategorilendirmesi üzerinden otomatik.
+  tanımlanır ([[converter-ekleme]]); kayıt `discovery.py` ile otomatiktir.
+  Kenar çubuğundaki grup/kısa ad/ikon için `ui_qml/bridge/converter_catalog.py`
+  tablosuna **bir satır** eklenir (eklenmezse "Diğer" grubunda görünür ve
+  `tests/test_converter_catalog.py` kırılır). `app_bridge.py`'ye converter'a
+  özel kod eklenmez.
 - `core/` altındaki her klasörde `__init__.py` bulunur (normal paket).
   Olmazsa PyInstaller dinamik keşfedilen converter'ları paketlemez —
   bkz. [[paketleme]], `tests/test_packaging.py`.

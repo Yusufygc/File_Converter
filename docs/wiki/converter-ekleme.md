@@ -41,16 +41,18 @@ class DocxToPdfConverter(BaseConverter):
    `registry`'ye kaydeder.
 3. `AppBridge.converters`/`categorizedConverters` property'leri
    `registry.all_converters()`'dan QML için listeyi üretir — yeni
-   converter otomatik görünür, `_categorize_converter()` sınıf adı/
-   uzantısına bakarak otomatik bir kategori+ikon atar.
+   converter otomatik görünür. Grubu, kısa adı ve ikonu
+   `ui_qml/bridge/converter_catalog.py` tablosundaki satırından gelir.
 
-## Görünüm Sırası (opsiyonel)
+## Kenar Çubuğu Grubu (zorunlu, tek satır)
 
-Sıra `app_bridge.py`'deki `_PREFERRED_ORDER` listesinden gelir. Bu
-**fonksiyonel bir gereklilik değildir** — listede olmayan bir converter
-alfabetik olarak sona eklenir, yani bu adımı atlasan da converter doğru
-çalışır, yalnızca dropdown'da en sonda görünür. İstersen
-`(source_ext, target_ext)` çiftini oraya da ekleyebilirsin.
+`ui_qml/bridge/converter_catalog.py` → `_ENTRIES`'e
+`("SinifAdi", CatalogEntry("grup_id", "Kısa Ad", "ikon"))` ekle.
+Satırın tablodaki yeri grup içi sırayı ve dosya bırakılınca otomatik
+seçilme önceliğini belirler (bir türü kabul eden ilk satır seçilir).
+Eklemezsen converter "Diğer" grubunda adıyla görünür ve
+`tests/test_converter_catalog.py` kırılır. Yeni ikon gerekiyorsa
+`ui_qml/qml/Icons.js`'e ekle (bkz. [[ui-katmani]]).
 
 ## Hata ve Kullanıcı Metinleri
 
@@ -69,8 +71,7 @@ implemente edip `option_specs` ile `OptionSpec` listesi döndür, değeri
 otomatik çizer (bkz. [[converter-arayuzu]], [[ui-katmani]]).
 `.pdf`→`.pdf` bir PyMuPDF aracıysa `PyMuPdfToolConverter`'dan türetip
 yalnızca `output_suffix` ver — `PdfRotateConverter` örnek alınabilir.
-Bu tür araçların kategori ikonu uzantıdan çıkarılamadığı için
-`app_bridge.py`'deki `_PDF_TOOL_META`'ya da bir satır eklenir.
+Grubu ve ikonu katalog tablosundan gelir (yukarıdaki "Kenar Çubuğu Grubu").
 
 ## Birden Fazla Motor Gerekiyorsa
 

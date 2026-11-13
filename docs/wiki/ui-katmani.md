@@ -10,13 +10,26 @@ Composition root / controller; `QObject` türevi, `Property`/`Signal`/
 `Slot` ile QML'e reaktif iki yönlü bağlanır. Sorumlulukları:
 - **Dependency composition**: `__init__()`'te `ConverterRegistry`
   oluşturur, `core.converters.discovery.register_all()` ile doldurur.
-- **Kategorileme**: `_categorize_converter()` her converter'ı sınıf
-  adı/uzantı kuralıyla (`Compress`/`Split`/`Merge` sınıf adı içeriyor mu,
-  uzantı hangi grupta) bir kategoriye (`pdf_tools`/`images`/
-  `spreadsheets`/`documents`) ve bir **ikon key'ine** (bkz. aşağıdaki
-  "Merkezi İkon Mekanizması") atar — **kural tabanlı**, yeni bir
-  converter eklendiğinde elle güncellenmesi gerekmez (bkz.
-  [[converter-ekleme]]).
+- **Kategorileme** (`ui_qml/bridge/converter_catalog.py`): kenar çubuğu
+  grupları, grup içi sıra, kısa ad ve ikon **tek tablodan** gelir
+  (sınıf adı → `CatalogEntry(group, short_name, icon)`). Gruplar kullanıcının
+  niyetine göre: PDF'e Dönüştür (5), PDF'ten Dönüştür (8), PDF Düzenle (5),
+  Güvenlik ve Bakım (5), Ofis Biçimleri (9). Tabloda olmayan converter
+  "Diğer" grubunda adıyla görünür; `tests/test_converter_catalog.py` eksik
+  satırı yakalar. Tablo sırası aynı zamanda converter listesinin sırası
+  (eski `_PREFERRED_ORDER`) ve dosya bırakılınca otomatik seçilecek aracın
+  önceliğidir. Eski sınıf adı/uzantı kuralları (`_categorize_converter`,
+  `_PDF_TOOL_META`) kaldırıldı: gruplar iki eksene dağılmıştı, PDF ile
+  başlayan bir iş dört grupta aranıyordu (bkz. [[log]]).
+- **Dosya-önce akışı** (`_add_paths`): dosya listesi her zaman **tek
+  türdür**. Liste boşken bırakılan dosyaların çoğunluk türü alınır, doluyken
+  listedeki tür; diğerleri eklenmez ve durum çubuğunda bildirilir
+  ("Farklı türde N dosya eklenmedi (Word)"; desteklenmeyen biçimler de).
+  Etkin araç o türü kabul etmiyorsa katalog sırasındaki ilk uygun araç
+  seçilir (.pdf → PDF → Word, .xlsx → Excel → PDF...). `selectConverter()`
+  dosyalar yeni araca uyuyorsa listeyi KORUR, uymuyorsa temizler.
+  `fileTypeFilter`/`fileTypeLabel` kenar çubuğunu süzer; `.jpeg` = `.jpg`
+  (`converter_catalog.normalize_ext`). Kararlar kullanıcı onaylı (2026-11-13).
 - **Dönüşüm orkestrasyonu**: `startConversion()` → `QmlConversionWorker`
   (normal, 1:N) veya `QmlMergeWorker` (birleştirme, N:1) — ikisi de
   `core.conversion_facade`'i çağırır, sonuçları sinyallerle taşır.
@@ -32,9 +45,6 @@ Composition root / controller; `QObject` türevi, `Property`/`Signal`/
   açılışta şema varsayılanlarına döner, `_build_options()` bunu
   `ConversionOptions.extra`'ya kopyalar. **Parola dahil bu değerler
   bilinçli olarak QSettings'e yazılmaz.**
-- `.pdf`→`.pdf` araçları uzantıdan ayırt edilemediği için kısa ad/ikon
-  `_PDF_TOOL_META` sözlüğünden (sınıf adı → (kısa ad, ikon)) gelir;
-  `PdfExtractImagesConverter` `images` kategorisine düşer.
 - **Ayarlar**: `QmlAppSettings` üzerinden tema/çıktı klasörü/kalite
   ayarlarını kalıcı saklar. `FILECONVERT_HOME` ayarlıysa (testler,
   derleme sonrası exe denemesi) kayıt defteri yerine o klasördeki
@@ -107,8 +117,14 @@ gösterir.
   (`settings`/`back` glyph) ve Tema (`theme_light`/`theme_dark` glyph)
   butonları.
 - `CategorySidebar.qml` — arama kutusu (`search`/`cancel` glyph),
-  `bridge.categorizedConverters`'tan **jenerik** üretilen kategori
-  ağacı (kategori ve item ikonları `Icons.glyph(modelData.icon)`).
+  `bridge.categorizedConverters`'tan **jenerik** üretilen grup ağacı.
+  Akordeon: aynı anda tek grup açık (başta ve araç değişince etkin aracın
+  grubu); arama ya da dosya süzgeci varken eşleşen tüm gruplar açık.
+  Liste doluyken "PDF dosyaları için uygun araçlar · Listeyi temizle"
+  şeridi çıkar ve başlıktaki sayı "18 / 32" olur.
+- `DropZone.qml` — liste boşken tüm desteklenen türleri
+  (`supportedTypesStr`) ve "uygun araç otomatik seçilir" yazar; dosya
+  seçme penceresi de liste boşken tüm türleri kabul eder.
 - `MainCanvas.qml` / `OptionsCard.qml` — dönüşüm seçenekleri + büyük
   CTA butonu (`bridge.isConverting`'e göre `convert`/`cancel` glyph +
   "Dönüştür"/"İptal Et" metni).

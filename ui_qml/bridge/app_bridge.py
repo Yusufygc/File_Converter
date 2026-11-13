@@ -12,7 +12,7 @@ import logging
 import platform
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 from PySide6.QtCore import (
     Property,
@@ -38,6 +38,7 @@ from core.interfaces.option_schema_interface import IOptionsProvider, default_op
 from core.interfaces.page_range_interface import IPageRangeSelectable
 from core.user_texts import HINT_LIBREOFFICE
 from core.utils.resource_helper import get_resource_path
+from ui_qml.bridge import converter_catalog as catalog
 from ui_qml.bridge.app_settings import QmlAppSettings
 from ui_qml.bridge.conversion_worker import QmlConversionWorker, QmlMergeWorker
 from ui_qml.bridge.file_discovery import collect_files
@@ -46,63 +47,8 @@ from ui_qml.bridge.file_list_model import FileListModel
 _log = logging.getLogger(__name__)
 
 
-_PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
-    (".pptx", ".pdf"),
-    (".pptx", ".odp"),
-    (".odp", ".pptx"),
-    (".odp", ".pdf"),
-    (".docx", ".pdf"),
-    (".docx", ".txt"),
-    (".docx", ".odt"),
-    (".odt", ".docx"),
-    (".pdf", ".docx"),
-    (".pdf", ".odt"),
-    (".pdf", ".jpg"),
-    (".pdf", ".png"),
-    (".pdf", ".txt"),
-    (".pdf", ".pdf", "PdfCompressConverter"),
-    (".pdf", ".pdf", "PdfSplitConverter"),
-    (".pdf", ".pdf", "PdfMergeConverter"),
-    (".pdf", ".pdf", "PdfRotateConverter"),
-    (".pdf", ".pdf", "PdfPageNumbersConverter"),
-    (".pdf", ".pdf", "PdfWatermarkConverter"),
-    (".pdf", ".pdf", "PdfProtectConverter"),
-    (".pdf", ".pdf", "PdfUnlockConverter"),
-    (".pdf", ".pdf", "PdfRepairConverter"),
-    (".pdf", ".png", "PdfExtractImagesConverter"),
-    (".pdf", ".pdf", "PdfOcrConverter"),
-    (".pdf", ".md"),
-    (".pdf", ".xlsx"),
-    (".xlsx", ".pdf"),
-    (".xlsx", ".csv"),
-    (".csv", ".xlsx"),
-    (".xlsx", ".ods"),
-    (".ods", ".xlsx"),
-    (".jpg", ".pdf"),
-]
-
-
-# Aynı `.pdf`→`.pdf` çiftini paylaşan araçlar uzantıdan ayırt edilemediği
-# için kısa ad ve ikon sınıf adına göre seçilir.
-_PDF_TOOL_META: Dict[str, Tuple[str, str]] = {
-    "PdfRotateConverter": ("PDF Döndür", "rotate"),
-    "PdfPageNumbersConverter": ("Sayfa Numarası", "page_number"),
-    "PdfWatermarkConverter": ("Filigran", "watermark"),
-    "PdfProtectConverter": ("PDF Şifrele", "lock"),
-    "PdfUnlockConverter": ("Şifre Kaldır", "unlock"),
-    "PdfRepairConverter": ("PDF Onar", "repair"),
-    "PdfOcrConverter": ("Aranabilir PDF", "ocr"),
-}
-
-
 def _sort_key(converter: IConverter):
-    two = (converter.source_extension, converter.target_extension)
-    three = (*two, converter.__class__.__name__)
-    if three in _PREFERRED_ORDER:
-        return (0, _PREFERRED_ORDER.index(three))
-    if two in _PREFERRED_ORDER:
-        return (0, _PREFERRED_ORDER.index(two))
-    return (1, converter.display_name)
+    return catalog.sort_key(converter.__class__.__name__, converter.display_name)
 
 
 def _option_specs_of(c: IConverter) -> List[Dict[str, Any]]:
@@ -118,68 +64,29 @@ def _default_extra_of(c: IConverter) -> Dict[str, Any]:
     return default_option_values(c.option_specs)
 
 
-def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any]]:
-    """Kategori ID ve zenginleştirilmiş dönüştürücü meta verisi döndürür."""
-    cls_name = c.__class__.__name__
-    s_ext = c.source_extension.lower()
-    t_ext = c.target_extension.lower()
+def _accepted_types(c: IConverter) -> List[str]:
+    """Converter'ın kabul ettiği türler, `.jpeg` gibi yazımlar tekilleştirilmiş."""
+    return sorted({catalog.normalize_ext(e) for e in c.accepted_extensions})
+
+
+def _converter_item(c: IConverter, index: int) -> Dict[str, Any]:
+    """QML'e giden converter sözlüğü (kenar çubuğu, birleşik kutu, aktif converter)."""
+    entry = catalog.entry_for(c.__class__.__name__, c.display_name)
     accepted = sorted(c.accepted_extensions)
-
-    if cls_name in _PDF_TOOL_META:
-        cat_id = "pdf_tools"
-        short_name, icon = _PDF_TOOL_META[cls_name]
-        badge = "PDF"
-    elif cls_name == "PdfExtractImagesConverter":
-        cat_id = "images"
-        short_name = "PDF ➔ Görseller"
-        icon = "image"
-        badge = "IMG"
-    elif "Compress" in cls_name:
-        cat_id = "pdf_tools"
-        short_name = "PDF Sıkıştır"
-        icon = "compress"
-        badge = "PDF"
-    elif "Split" in cls_name:
-        cat_id = "pdf_tools"
-        short_name = "PDF Böl"
-        icon = "split"
-        badge = "PDF"
-    elif "Merge" in cls_name:
-        cat_id = "pdf_tools"
-        short_name = "PDF Birleştir"
-        icon = "merge"
-        badge = "PDF"
-    elif s_ext == ".pdf" and t_ext == ".txt":
-        cat_id = "pdf_tools"
-        short_name = "PDF ➔ TXT"
-        icon = "note"
-        badge = "TXT"
-    elif s_ext in (".jpg", ".jpeg", ".png") or t_ext in (".jpg", ".jpeg", ".png"):
-        cat_id = "images"
-        short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "image"
-        badge = t_ext.replace(".", "").upper()
-    elif s_ext in (".xlsx", ".csv", ".ods") or t_ext in (".xlsx", ".csv", ".ods"):
-        cat_id = "spreadsheets"
-        short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "table"
-        badge = t_ext.replace(".", "").upper()
-    else:
-        cat_id = "documents"
-        short_name = f"{s_ext.replace('.', '').upper()} ➔ {t_ext.replace('.', '').upper()}"
-        icon = "document"
-        badge = t_ext.replace(".", "").upper()
-
-    item_data = {
+    target = c.target_extension.lower()
+    badge = "IMG" if c.__class__.__name__ == "PdfExtractImagesConverter" else target.lstrip(".").upper()
+    return {
         "index": index,
+        "group": entry.group,
         "displayName": c.display_name,
-        "shortName": short_name,
+        "shortName": entry.short_name,
         "sourceExt": c.source_extension,
         "targetExt": c.target_extension,
-        "className": cls_name,
-        "icon": icon,
+        "className": c.__class__.__name__,
+        "icon": entry.icon,
         "badge": badge,
         "acceptedExts": list(accepted),
+        "acceptedTypes": _accepted_types(c),
         "acceptedExtsStr": "  ·  ".join(e.upper() for e in accepted),
         "isAvailable": c.is_available,
         "unavailableHint": c.unavailable_hint,
@@ -189,7 +96,6 @@ def _categorize_converter(c: IConverter, index: int) -> Tuple[str, Dict[str, Any
         "supportsEngineSelect": isinstance(c, IEngineSelectable),
         "optionSpecs": _option_specs_of(c),
     }
-    return cat_id, item_data
 
 
 class AppBridge(QObject):
@@ -305,43 +211,18 @@ class AppBridge(QObject):
 
     @Property(list, notify=convertersChanged)
     def converters(self) -> List[Dict[str, Any]]:
-        result = []
-        for i, c in enumerate(self._converters):
-            accepted = sorted(c.accepted_extensions)
-            result.append(
-                {
-                    "index": i,
-                    "displayName": c.display_name,
-                    "sourceExt": c.source_extension,
-                    "targetExt": c.target_extension,
-                    "className": c.__class__.__name__,
-                    "acceptedExts": list(accepted),
-                    "acceptedExtsStr": "  ·  ".join(e.upper() for e in accepted),
-                    "isAvailable": c.is_available,
-                    "unavailableHint": c.unavailable_hint,
-                    "activeEngineName": c.active_engine_name,
-                    "supportsMerge": isinstance(c, IMergeConverter),
-                    "supportsPageRange": isinstance(c, IPageRangeSelectable),
-                    "supportsEngineSelect": isinstance(c, IEngineSelectable),
-                    "optionSpecs": _option_specs_of(c),
-                }
-            )
-        return result
-
+        return [_converter_item(c, i) for i, c in enumerate(self._converters)]
 
     @Property(list, notify=convertersChanged)
     def categorizedConverters(self) -> List[Dict[str, Any]]:
-        cats = {
-            "documents": {"id": "documents", "title": "Belgeler", "icon": "document", "items": []},
-            "spreadsheets": {"id": "spreadsheets", "title": "Tablolar", "icon": "table", "items": []},
-            "images": {"id": "images", "title": "Görseller", "icon": "image", "items": []},
-            "pdf_tools": {"id": "pdf_tools", "title": "PDF Araçları", "icon": "convert", "items": []},
-        }
-        for i, c in enumerate(self._converters):
-            cat_id, item = _categorize_converter(c, i)
-            if cat_id in cats:
-                cats[cat_id]["items"].append(item)
-        return list(cats.values())
+        """Niyete göre gruplar (bkz. converter_catalog.py); boş gruplar gösterilmez."""
+        items = [_converter_item(c, i) for i, c in enumerate(self._converters)]
+        result = []
+        for group in catalog.groups_with_other():
+            group_items = [item for item in items if item["group"] == group.id]
+            if group_items:
+                result.append({"id": group.id, "title": group.title, "icon": group.icon, "items": group_items})
+        return result
 
     @Property(int, notify=currentConverterIndexChanged)
     def currentConverterIndex(self) -> int:
@@ -349,24 +230,7 @@ class AppBridge(QObject):
 
     @Property(dict, notify=currentConverterChanged)
     def currentConverter(self) -> Dict[str, Any]:
-        c = self._active_converter
-        accepted = sorted(c.accepted_extensions)
-        return {
-            "index": self._active_index,
-            "displayName": c.display_name,
-            "sourceExt": c.source_extension,
-            "targetExt": c.target_extension,
-            "className": c.__class__.__name__,
-            "acceptedExts": list(accepted),
-            "acceptedExtsStr": "  ·  ".join(e.upper() for e in accepted),
-            "isAvailable": c.is_available,
-            "unavailableHint": c.unavailable_hint,
-            "activeEngineName": c.active_engine_name,
-            "supportsMerge": isinstance(c, IMergeConverter),
-            "supportsPageRange": isinstance(c, IPageRangeSelectable),
-            "supportsEngineSelect": isinstance(c, IEngineSelectable),
-            "optionSpecs": _option_specs_of(c),
-        }
+        return _converter_item(self._active_converter, self._active_index)
 
     @Property(list, notify=engineListChanged)
     def engineList(self) -> List[Dict[str, Any]]:
@@ -518,12 +382,17 @@ class AppBridge(QObject):
             return
         if self._active_index == index:
             return
+        self._activate(index)
 
+    def _activate(self, index: int) -> None:
         self._active_index = index
         self._active_converter = self._converters[index]
 
-        # Temizlik ve resetleme
-        self._file_model.clear()
+        # Dosyalar yeni araca uyuyorsa listede kalır (dosya-önce akışı: PDF bırakıp
+        # PDF araçları arasında gezinmek listeyi boşaltmamalı); uymuyorsa temizlenir.
+        file_type = self._file_type()
+        if file_type and file_type not in _accepted_types(self._active_converter):
+            self._file_model.clear()
         self._is_merge_mode = False
         self._page_range = ""
         self._extra_options = _default_extra_of(self._active_converter)
@@ -617,11 +486,88 @@ class AppBridge(QObject):
             self._extra_options[key] = value
 
     # ── Dosya Ekleme / Kaldırma ───────────────────────────────────────
+    # ── Dosya-Önce Akışı ──────────────────────────────────────────────
+    def _supported_exts(self) -> set:
+        """Herhangi bir converter'ın kabul ettiği tüm uzantılar (ham yazımlarıyla)."""
+        return {e.lower() for c in self._converters for e in c.accepted_extensions}
+
+    def _file_type(self) -> str:
+        """Listedeki dosyaların türü ('.pdf'); liste boşsa ''. Liste her zaman tek türdür."""
+        paths = self._file_model.all_paths()
+        return catalog.normalize_ext(paths[0].suffix) if paths else ""
+
+    def _first_converter_for(self, file_type: str) -> Optional[int]:
+        """Türü kabul eden ilk converter (katalog sırası: .pdf → PDF → Word)."""
+        for i, c in enumerate(self._converters):
+            if file_type in _accepted_types(c):
+                return i
+        return None
+
+    @Property(str, notify=fileCountChanged)
+    def fileTypeFilter(self) -> str:
+        """Kenar çubuğu süzgeci: listedeki dosyaların türü ('.pdf') ya da ''."""
+        return self._file_type()
+
+    @Property(str, notify=fileCountChanged)
+    def fileTypeLabel(self) -> str:
+        return catalog.type_label(self._file_type())
+
+    @Property(str, constant=True)
+    def supportedTypesStr(self) -> str:
+        return "  ·  ".join(catalog.ordered_type_labels(self._supported_exts()))
+
+    def _add_paths(self, paths: List[Path]) -> None:
+        """
+        Dosyaları tek türlü listeye ekler; gerekirse uygun aracı seçer.
+        - Liste doluysa listedeki tür; boşsa gelenlerin ÇOĞUNLUK türü kabul edilir.
+        - Etkin araç o türü kabul etmiyorsa katalog sırasındaki ilk uygun araç seçilir.
+        - Atlanan dosyalar (farklı tür / desteklenmeyen) durum çubuğunda bildirilir.
+        """
+        supported = self._supported_exts()
+        unsupported = [p for p in paths if p.suffix.lower() not in supported]
+        candidates = [p for p in paths if p.suffix.lower() in supported]
+        if not candidates:
+            if unsupported:
+                self._set_status(f"{len(unsupported)} dosya desteklenmeyen biçimde; eklenmedi", "warning")
+            return
+
+        target = self._file_type()
+        if not target:
+            counts: Dict[str, int] = {}
+            for p in candidates:
+                ext = catalog.normalize_ext(p.suffix)
+                counts[ext] = counts.get(ext, 0) + 1
+            target = max(counts, key=lambda ext: counts[ext])  # eşitlikte ilk görülen
+
+        if target not in _accepted_types(self._active_converter):
+            index = self._first_converter_for(target)
+            if index is None:
+                return
+            self._activate(index)
+
+        matching = [p for p in candidates if catalog.normalize_ext(p.suffix) == target]
+        other = [p for p in candidates if catalog.normalize_ext(p.suffix) != target]
+        added = self._file_model.add_files(matching)
+
+        notes = []
+        if other:
+            other_labels = sorted({catalog.type_label(p.suffix) for p in other})
+            notes.append(
+                f"Farklı türde {len(other)} dosya eklenmedi ({', '.join(other_labels)}); "
+                f"liste yalnızca {catalog.type_label(target)} dosyaları içerebilir"
+            )
+        if unsupported:
+            notes.append(f"{len(unsupported)} dosya desteklenmeyen biçimde")
+        if notes:
+            self._set_status("; ".join(notes), "warning")
+        elif added:
+            self._set_status(f"{added} {catalog.type_label(target)} dosyası eklendi")
+
     @Slot(list)
     def addFilesFromUrls(self, urls: List[Any]) -> None:
-        """QML DropZone veya FileDialog'dan gelen QUrl/string listesini işler."""
+        """QML DropZone'dan gelen QUrl/string listesini işler (klasörler taranır)."""
         paths: List[Path] = []
-        accepted = {e.lower() for e in self._active_converter.accepted_extensions}
+        accepted = self._supported_exts()
 
         for u in urls:
             local_path_str = ""
@@ -639,11 +585,11 @@ class AppBridge(QObject):
             p = Path(local_path_str)
             if p.is_dir():
                 paths.extend(collect_files(p, accepted))
-            elif p.suffix.lower() in accepted:
-                paths.append(p)
+            elif p.is_file():
+                paths.append(p)  # desteklenmeyenler _add_paths'te sayılıp bildirilir
 
         if paths:
-            self._file_model.add_files(paths)
+            self._add_paths(paths)
 
     @Slot(int)
     def removeFile(self, index: int) -> None:
@@ -655,20 +601,27 @@ class AppBridge(QObject):
 
     @Slot()
     def openFileDialog(self) -> None:
-        """Native dosya seçici penceresi açar."""
-        display_name = self._active_converter.display_name.split("→")[0].strip()
-        patterns = " ".join(
-            f"*{ext}" for ext in self._active_converter.accepted_extensions
-        )
-        filters = f"{display_name} Dosyaları ({patterns});;Tüm Dosyalar (*.*)"
+        """
+        Native dosya seçici. Liste boşken tüm desteklenen türler seçilebilir
+        (uygun araç seçilen dosyaya göre otomatik belirlenir); doluysa listedeki tür.
+        """
+        file_type = self._file_type()
+        if file_type:
+            exts = [e for e in self._active_converter.accepted_extensions
+                    if catalog.normalize_ext(e) == file_type]
+            label = f"{catalog.type_label(file_type)} Dosyaları"
+        else:
+            exts = sorted(self._supported_exts())
+            label = "Desteklenen Dosyalar"
+        patterns = " ".join(f"*{ext}" for ext in exts)
         file_paths, _ = QFileDialog.getOpenFileNames(
             None,
-            f"{display_name} Dosyaları Seç",
+            "Dosya Seç",
             str(Path.home()),
-            filters,
+            f"{label} ({patterns});;Tüm Dosyalar (*.*)",
         )
         if file_paths:
-            self._file_model.add_files([Path(p) for p in file_paths])
+            self._add_paths([Path(p) for p in file_paths])
 
     @Slot()
     def browseOutputDir(self) -> None:

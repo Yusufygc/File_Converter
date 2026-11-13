@@ -12,6 +12,39 @@ Rectangle {
     border.width: 1
 
     property string searchText: ""
+    // Listedeki dosyaların türü (".pdf"); doluyken yalnızca o türü kabul eden araçlar görünür.
+    readonly property string fileFilter: (typeof bridge !== "undefined" && bridge) ? bridge.fileTypeFilter : ""
+    // Akordeon: aynı anda tek grup açık; başlangıçta ve araç değişince etkin aracın grubu.
+    property string expandedGroup: (typeof bridge !== "undefined" && bridge && bridge.currentConverter) ?
+                                   bridge.currentConverter.group : ""
+
+    function matches(item) {
+        if (root.fileFilter && (item.acceptedTypes || []).indexOf(root.fileFilter) === -1)
+            return false
+        if (!root.searchText)
+            return true
+        var s = root.searchText
+        return (item.displayName && item.displayName.toLowerCase().indexOf(s) !== -1) ||
+               (item.shortName && item.shortName.toLowerCase().indexOf(s) !== -1) ||
+               (item.sourceExt && item.sourceExt.toLowerCase().indexOf(s) !== -1) ||
+               (item.targetExt && item.targetExt.toLowerCase().indexOf(s) !== -1) ||
+               (item.badge && item.badge.toLowerCase().indexOf(s) !== -1)
+    }
+
+    readonly property int visibleCount: {
+        var cats = (typeof bridge !== "undefined" && bridge) ? bridge.categorizedConverters : []
+        var n = 0
+        for (var i = 0; i < cats.length; i++)
+            n += cats[i].items.filter(root.matches).length
+        return n
+    }
+
+    Connections {
+        target: (typeof bridge !== "undefined") ? bridge : null
+        function onCurrentConverterChanged() {
+            if (bridge.currentConverter) root.expandedGroup = bridge.currentConverter.group
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -43,7 +76,9 @@ Rectangle {
                 Text {
                     id: countText
                     anchors.centerIn: parent
-                    text: (typeof bridge !== "undefined" && bridge && bridge.converters) ? bridge.converters.length : "0"
+                    text: (root.searchText || root.fileFilter) ?
+                          root.visibleCount + " / " + ((typeof bridge !== "undefined" && bridge && bridge.converters) ? bridge.converters.length : 0) :
+                          ((typeof bridge !== "undefined" && bridge && bridge.converters) ? bridge.converters.length : "0")
                     font.family: theme.fontFamily
                     font.pointSize: 9
                     font.bold: true
@@ -123,6 +158,53 @@ Rectangle {
             }
         }
 
+        // Dosya türü süzgeci şeridi (dosya-önce akışı)
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: filterRow.implicitHeight + 12
+            visible: root.fileFilter !== ""
+            radius: theme.radiusSmall
+            color: theme.accentDim
+            border.color: theme.borderLight
+            border.width: 1
+
+            RowLayout {
+                id: filterRow
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 6
+                spacing: 6
+
+                Text {
+                    Layout.fillWidth: true
+                    text: ((typeof bridge !== "undefined" && bridge) ? bridge.fileTypeLabel : "") +
+                          " dosyaları için uygun araçlar"
+                    font.family: theme.fontFamily
+                    font.pointSize: 9
+                    font.bold: true
+                    color: theme.textPrimary
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    text: "Listeyi temizle"
+                    font.family: theme.fontFamily
+                    font.pointSize: 8.5
+                    font.underline: clearFilterMouse.containsMouse
+                    color: theme.textSecondary
+
+                    MouseArea {
+                        id: clearFilterMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        enabled: typeof bridge !== "undefined" && bridge && !bridge.isConverting
+                        onClicked: bridge.clearFiles()
+                    }
+                }
+            }
+        }
+
         // Ayraç Çizgisi
         Rectangle {
             Layout.fillWidth: true
@@ -153,22 +235,12 @@ Rectangle {
                         Layout.fillWidth: true
                         spacing: 4
 
-                        property bool isExpanded: true
-                        readonly property bool isEffectiveExpanded: root.searchText !== "" ? true : isExpanded
+                        // Arama ya da dosya süzgeci varken eşleşen tüm gruplar açık; yoksa tek grup (akordeon).
+                        readonly property bool isEffectiveExpanded: (root.searchText !== "" || root.fileFilter !== "") ?
+                                                                    true : root.expandedGroup === modelData.id
 
-                        // Bu kategoride arama ile eşleşen öğe var mı?
-                        readonly property var filteredItems: {
-                            var items = modelData.items || []
-                            if (!root.searchText) return items
-                            return items.filter(function(item) {
-                                var s = root.searchText
-                                return (item.displayName && item.displayName.toLowerCase().indexOf(s) !== -1) ||
-                                       (item.shortName && item.shortName.toLowerCase().indexOf(s) !== -1) ||
-                                       (item.sourceExt && item.sourceExt.toLowerCase().indexOf(s) !== -1) ||
-                                       (item.targetExt && item.targetExt.toLowerCase().indexOf(s) !== -1) ||
-                                       (item.badge && item.badge.toLowerCase().indexOf(s) !== -1)
-                            })
-                        }
+                        // Bu kategoride arama ve dosya türüyle eşleşen öğeler
+                        readonly property var filteredItems: (modelData.items || []).filter(root.matches)
 
                         visible: filteredItems.length > 0
 
@@ -204,10 +276,11 @@ Rectangle {
                                     font.family: theme.fontFamily
                                     font.pointSize: 10
                                     font.weight: Font.ExtraBold
-                                    font.letterSpacing: 0.8
+                                    font.letterSpacing: 0.3
                                     color: theme.textPrimary
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignVCenter
+                                    elide: Text.ElideRight
                                 }
 
                                 Rectangle {
@@ -247,7 +320,7 @@ Rectangle {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    catColumn.isExpanded = !catColumn.isExpanded
+                                    root.expandedGroup = (root.expandedGroup === modelData.id) ? "" : modelData.id
                                 }
                             }
                         }

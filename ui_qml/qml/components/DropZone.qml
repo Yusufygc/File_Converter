@@ -15,6 +15,7 @@ Rectangle {
 
     Column {
         anchors.centerIn: parent
+        width: parent.width - 40
         spacing: 6
 
         // Icon
@@ -35,18 +36,24 @@ Rectangle {
             font.pointSize: 10
             font.bold: true
             color: theme.textPrimary
-            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
         }
 
-        // Accepted extensions label
+        // Kabul edilen türler: liste boşken tüm desteklenen türler (uygun araç
+        // dosyaya göre seçilir), doluyken etkin aracın kabul ettikleri.
         Text {
-            text: (typeof bridge !== "undefined" && bridge && bridge.currentConverter) ?
-                  bridge.currentConverter.acceptedExtsStr : ""
+            text: (typeof bridge === "undefined" || !bridge) ? "" :
+                  (bridge.hasFiles ? (bridge.currentConverter ? bridge.currentConverter.acceptedExtsStr : "") :
+                   bridge.supportedTypesStr + "  —  uygun araç otomatik seçilir")
             font.family: theme.fontFamily
             font.pointSize: 9
             color: theme.textMuted
             font.letterSpacing: 0.5
-            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
         }
     }
 

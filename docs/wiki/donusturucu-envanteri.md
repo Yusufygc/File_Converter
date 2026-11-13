@@ -1,8 +1,9 @@
 # Dönüştürücü Envanteri
 
 `core/converters/` altında [[converter-ekleme]] tarafından otomatik
-keşfedilen 32 converter. Sıra, `ui_qml/bridge/app_bridge.py`'deki
-`_PREFERRED_ORDER` ile aynı (varsayılan dropdown sırası). On converter
+keşfedilen 32 converter. Bu tablo teknik envanterdir; kenar çubuğundaki
+grupları ve sırası `ui_qml/bridge/converter_catalog.py`'den gelir
+(bkz. [[ui-katmani]]). On converter
 (Sıkıştır, Böl, Birleştir, Döndür, Sayfa No, Filigran, Şifrele, Şifre
 Kaldır, Onar, Aranabilir PDF) aynı `.pdf`→`.pdf` uzantı çiftini paylaşıyor — `ConverterRegistry`'nin iç
 anahtarına sınıf adı eklenmesi bunların birbirini ezmesini önlüyor
