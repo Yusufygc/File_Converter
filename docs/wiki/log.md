@@ -4,6 +4,15 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-11-13] [DOCS] | Güncelleme düzeltmesi sahada doğrulandı (v1.1.3 → v1.1.4)
+
+Makinedeki tüm FileConvert kurulumları kaldırıldı (kullanıcı + eski yönetici
+kurulumu), son hal yerelde derlendi (kapı, exe ve kurulum denemesi geçti).
+v1.1.3 (kurulum modu düzeltmesi) ve v1.1.4 yayınlandı; CI exe özeti beş
+Release'te de yerelle aynı. 1.1.3 → 1.1.4 uygulama içi güncellemesi UAC
+sormadan, kullanıcı kurulumunda, "Administrative install mode: No" ile
+tamamlandı ve uygulama 1.1.4 olarak yeniden açıldı. Detay: [[guncelleme-sistemi]].
+
 ## [2026-11-13] [FIX] | İlk Release'ler ve gerçek güncelleme denemesi
 
 v1.1.0 etiketi itildi; Windows CI'da test cp1252 kodlamasıyla kırıldı (Release

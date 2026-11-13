@@ -77,11 +77,22 @@ güncellemeyi BAŞLATAN sürümde olmalı: 1.1.3 ve sonrasından güncellenen
 kurulumlarda etkili; 1.1.1/1.1.2'den güncelleme yine eski davranışı gösterebilir
 (yalnızca hem eski yönetici hem kullanıcı kurulumu olan makinelerde).
 
+## Gerçek Deneme 2 (2026-11-13, temiz makine, v1.1.3 → v1.1.4)
+
+Önce tüm FileConvert kurulumları kaldırıldı. 1.1.3 Release'ten indirilip
+varsayılanla kuruldu ("Administrative install mode: No"). v1.1.4 yayınlandı;
+1.1.3 açılınca pencere çıktı → Güncelle → ~94 MB indirme (~0,7 MB/sn, ~2 dk)
+→ kurulum **UAC sormadan** "User privileges: None", "Administrative install
+mode: No" ile aynı klasöre (`%LOCALAPPDATA%\Programs\FileConvert`) →
+"Installation process succeeded" → uygulama 1.1.4 olarak kendiliğinden
+açıldı; HKLM'de kayıt oluşmadı. `/CURRENTUSER` düzeltmesi doğrulandı.
+
 ## Sınırlar / Doğrulanmayanlar
 
-- `/CURRENTUSER` düzeltmesinin gerçek bir güncellemede denenmesi (1.1.3 → 1.1.4)
-  **doğrulanmadı**; birim testi ve Inno derlemesi var. Sorun olursa
-  `%TEMP%\FileConvertUpdate\install.log` ("Administrative install mode" satırı).
+- Başka (SAC açık) makinelerde kurulum ve güncelleme denenmedi.
+- İndirme sırasında iptal yok; yavaş bağlantıda kullanıcı ilerleme çubuğunu bekler.
+- "Tüm kullanıcılar" (yönetici) kurulumundan güncelleme (`/ALLUSERS`, UAC ile)
+  gerçek denemede doğrulanmadı.
 - 1.0.0 kurulumlarında güncelleyici yok: 1.0.0 kullanıcıları 1.1.0'ı bir kez
   elle kurar (kurulum eski yönetici kurulumunu kaldırmayı teklif eder).
 - Yalnızca Windows. İndirme sürerken iptal yok.
