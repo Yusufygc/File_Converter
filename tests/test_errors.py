@@ -82,7 +82,7 @@ def test_real_corrupt_pdf_gives_user_message(tmp_path):
 
 def test_output_dir_failure_is_reported_not_raised(tmp_path):
     blocker = tmp_path / "dosya"
-    blocker.write_text("klasör değil")
+    blocker.write_text("klasör değil", encoding="utf-8")  # CI'da varsayılan kodlama cp1252
     src = tmp_path / "input.foo"
     src.write_text("x")
 
