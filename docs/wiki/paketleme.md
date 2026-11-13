@@ -60,7 +60,7 @@ yayın **durur**. CI aynı kapıdan geçer.
 | `launch_check` (10 sn, izole `FILECONVERT_HOME`) | hatasız çalıştı; günlük: "32 dönüştürücü yüklendi; kullanılamayan: yok" |
 | `installer_check` (sessiz kurulum → exe → kaldırıcı) | başarılı; gerçek 1.0.0 kaydı (HKLM) ve kısayollar bozulmadı |
 | Kurulum dosyası boyutu | 94 MB (`dist/FileConvert` 370 MB) |
-| CI'da derlenen exe'nin özeti yerelle aynı mı | **doğrulanmadı** (henüz hiç Release itilmedi) |
+| CI'da derlenen exe'nin özeti yerelle aynı mı | **aynı** (v1.1.1 ve v1.1.2 Release'leri, `windows-latest`) |
 | İndirilmiş (MOTW'li) kurulum dosyası başka/SAC'lı makinede | **doğrulanmadı** |
 
 ### Deneme kapısının açığı (yaşandı)
@@ -119,7 +119,8 @@ Sürüm `build_installer.py`'den `/DAppVersion` ile gelir (elle derlenirse
 `#error`). UTF-8 BOM'lu (Türkçe metinler).
 
 - `AppId={{8E478C22-…}` **sabit** (1.0.0 ile aynı): değişirse ikinci kurulum olur.
-- `PrivilegesRequired=lowest` (+ `OverridesAllowed=dialog`): UAC sormaz,
+- `PrivilegesRequired=lowest` (+ `OverridesAllowed=commandline dialog`; `commandline`,
+  güncelleyicinin `/CURRENTUSER`/`/ALLUSERS` geçebilmesi için — bkz. [[guncelleme-sistemi]]): UAC sormaz,
   `%LOCALAPPDATA%\Programs\FileConvert`'e kurar; uygulama içi sessiz
   güncelleme bunun için şart (admin kurulum Python'dan başlatılınca 740 verir).
 - `CloseApplications=yes`, `RestartApplications=no`; yeniden açma `[Run]`

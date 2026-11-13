@@ -28,6 +28,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 from typing import Any, BinaryIO
 import urllib.error
@@ -325,9 +326,42 @@ def download_installer(
 # ---------------------------------------------------------------- kurulum
 
 
-def installer_arguments(installer: Path, log_dir: Path) -> list[str]:
+def running_app_dir() -> Path | None:
+    """Paketlenmiş exe'nin klasörü; kaynak koddan çalışırken None."""
+    if not getattr(sys, "frozen", False):
+        return None
+    return Path(sys.executable).resolve().parent
+
+
+def install_mode_arguments(app_dir: Path | None) -> list[str]:
+    """
+    Güncellemenin ÇALIŞAN kurulumun üstüne yazması için Inno kurulum modu.
+
+    Neden gerekli (2026-11-13, gerçek 1.1.1 → 1.1.2 denemesi): aynı AppId ile
+    eski bir yönetici kurulumu (1.0.0, Program Files) da varken Inno varsayılan
+    olarak önceki yönetici modunu seçti; güncelleme kullanıcı kurulumunu değil
+    eski kurulumu yükseltti. `%LOCALAPPDATA%` altındaki kurulum `/CURRENTUSER`,
+    başka yerdeki (Program Files, "tüm kullanıcılar") `/ALLUSERS` alır.
+    Inno betiğinde `PrivilegesRequiredOverridesAllowed=commandline dialog` şart.
+    """
+    if app_dir is None:
+        return []
+    local = os.environ.get("LOCALAPPDATA", "")
+    if local:
+        try:
+            app_dir.resolve().relative_to(Path(local).resolve())
+            return ["/CURRENTUSER"]
+        except ValueError:
+            pass
+    return ["/ALLUSERS"]
+
+
+def installer_arguments(installer: Path, log_dir: Path, app_dir: Path | None = None) -> list[str]:
     """Sabit argümanlar (kabuk yok): sessiz kurulum + ilerleme penceresi, çalışan uygulamayı kapat, günlük yaz."""
-    return [str(installer), "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", f"/LOG={log_dir / 'install.log'}"]
+    return [
+        str(installer), "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS",
+        *install_mode_arguments(app_dir), f"/LOG={log_dir / 'install.log'}",
+    ]
 
 
 def launch_installer(
@@ -343,7 +377,7 @@ def launch_installer(
     if not _INSTALLER_NAME_RE.match(installer.name):
         raise UpdateError("Kurulum dosyası adı beklenen desene uymuyor; başlatılmadı.")
     target_log_dir = log_dir or installer.parent
-    args = installer_arguments(installer, target_log_dir)
+    args = installer_arguments(installer, target_log_dir, running_app_dir())
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     try:
         popen(args, creationflags=flags, close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

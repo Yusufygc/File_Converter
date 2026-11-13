@@ -48,6 +48,17 @@ Release iş akışı sırası:
 
 `test.yml` (her push, Ubuntu) ayrı iş akışıdır; yayın ona bağlı değildir.
 
+## Yayın Geçmişi
+
+| Etiket | Sonuç |
+|---|---|
+| v1.1.0 | Release **oluşmadı**: Windows CI'da `tests/test_errors.py` cp1252 kodlamasıyla kırıldı. Etiket uzakta Release'siz duruyor (zorla taşıma izin denetimince reddedildi; güncelleyici yalnızca Release'lere baktığı için zararsız) |
+| v1.1.1 | İlk Release. CI exe özeti = yerel (`559c5fe5…`) |
+| v1.1.2 | Yalnızca sürüm artışı; uygulama içi güncelleme denemesi için ([[guncelleme-sistemi]]) |
+
+Ders: yerelde Türkçe kodlama (cp1254) testlerdeki kodlamasız `write_text`'i
+gizliyor; Windows CI (cp1252) yakalıyor. Dosya yazan testler `encoding="utf-8"` verir.
+
 ## Yayından Sonra
 
 - CI günlüğünde "Kararlı exe özeti onaylananla aynı" satırını gör. Görmezsen

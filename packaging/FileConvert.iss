@@ -36,7 +36,10 @@ DisableProgramGroupPage=yes
 ; UAC sormaz: uygulama ici guncelleme sessiz calisir, derleme sonrasi deneme mumkun olur.
 ; Kullanici isterse "tum kullanicilar icin" (yonetici) secebilir.
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; commandline: uygulama ici guncelleme calisan kurulumun modunu /CURRENTUSER ya da /ALLUSERS ile
+; zorlar. Yoksa ayni AppId ile eski bir yonetici kurulumu varken Inno onu secip yanlis kurulumu
+; yukseltiyordu (2026-11-13, 1.1.1 -> 1.1.2 denemesi).
+PrivilegesRequiredOverridesAllowed=commandline dialog
 ; Guncellemede calisan uygulama kapatilir (dosya kilidi olmasin); yeniden acmayi [Run] yapar
 CloseApplications=yes
 RestartApplications=no

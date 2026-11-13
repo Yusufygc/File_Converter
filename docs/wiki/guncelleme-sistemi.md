@@ -28,8 +28,11 @@ ve geçici `FILECONVERT_HOME` ayarlar.
 2. **Karşılaştırma:** etiket `version.py` ile sayısal (`1.10.0 > 1.9.0`);
    taslak/ön sürüm yok sayılır; "Bu Sürümü Atla" sürümü `updates.json`'a yazar.
 3. **İndirme:** `%TEMP%\FileConvertUpdate`, ilerleme çubuğu, doğrulamalar (aşağıda).
-4. **Kurulum:** `FileConvert-Setup-X.Y.Z.exe /SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /LOG=...\install.log`,
-   bağımsız süreç, kabuk yok. Uygulama 1.5 sn sonra kapanır; Inno `[Run]
+4. **Kurulum:** `FileConvert-Setup-X.Y.Z.exe /SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS
+   /CURRENTUSER|/ALLUSERS /LOG=...\install.log`, bağımsız süreç, kabuk yok. Kurulum modu
+   ÇALIŞAN exe'nin yerinden çıkarılır (`install_mode_arguments`): `%LOCALAPPDATA%`
+   altındaysa `/CURRENTUSER`, değilse `/ALLUSERS`. Inno'da
+   `PrivilegesRequiredOverridesAllowed=commandline dialog` bunun için şart. Uygulama 1.5 sn sonra kapanır; Inno `[Run]
    Check: RelaunchAfterUpdate` ile yeniden açar.
 5. **Windows engellerse:** `CreateProcess` → `WinError 4551/1260` →
    Gezgin yolu (`ShellExecuteW`) → yine engelse 15 sn aralıkla en çok
@@ -55,11 +58,30 @@ ve geçici `FILECONVERT_HOME` ayarlar.
 `skipped_version`); bozuksa varsayılanlar. Kök `core/utils/app_paths.py`
 (`FILECONVERT_HOME` ile değiştirilebilir).
 
-## Sınırlar / Doğrulanmayanlar (2026-11-13)
+## Gerçek Deneme (2026-11-13, bu makine, v1.1.1 → v1.1.2)
 
-- Henüz hiç Release yok: gerçek bir sürümden sürüme uçtan uca güncelleme
-  **doğrulanmadı** (birim testleri var). İlk iki yayından sonra (1.1.0 → 1.1.1)
-  denenmeli; sorun olursa `%TEMP%\FileConvertUpdate\install.log`.
+Release'ten indirilen 1.1.1 kullanıcı kurulumu açıldı → ~3 sn sonra "Yeni
+sürüm var" penceresi → Güncelle → indirme + SHA-256 (GitHub `digest`) →
+sessiz kurulum ("Installation process succeeded") → uygulama 1.1.2 olarak
+kendiliğinden açıldı (günlük: "FileConvert 1.1.2 başlatılıyor"). CI'da
+derlenen 1.1.1 ve 1.1.2 kurulumlarındaki exe özeti yerelle aynı
+(`559c5fe5…`): kararlı exe sahada doğrulandı.
+
+**Bulgu (düzeltildi):** makinede aynı AppId'li eski 1.0.0 yönetici kurulumu
+(Program Files, HKLM) da vardı. Inno önceki yönetici modunu seçip
+(`UsePreviousPrivileges` varsayılanı, günlük: "Administrative install mode: Yes")
+kullanıcı kurulumunu değil **eski yönetici kurulumunu** 1.1.2'ye yükseltti.
+Düzeltme: güncelleyici kurulum modunu çalışan exe'nin yerine göre zorlar
+(yukarıda, adım 4); Inno komut satırı geçersiz kılmasına izin verir. Düzeltme
+güncellemeyi BAŞLATAN sürümde olmalı: 1.1.3 ve sonrasından güncellenen
+kurulumlarda etkili; 1.1.1/1.1.2'den güncelleme yine eski davranışı gösterebilir
+(yalnızca hem eski yönetici hem kullanıcı kurulumu olan makinelerde).
+
+## Sınırlar / Doğrulanmayanlar
+
+- `/CURRENTUSER` düzeltmesinin gerçek bir güncellemede denenmesi (1.1.3 → 1.1.4)
+  **doğrulanmadı**; birim testi ve Inno derlemesi var. Sorun olursa
+  `%TEMP%\FileConvertUpdate\install.log` ("Administrative install mode" satırı).
 - 1.0.0 kurulumlarında güncelleyici yok: 1.0.0 kullanıcıları 1.1.0'ı bir kez
   elle kurar (kurulum eski yönetici kurulumunu kaldırmayı teklif eder).
 - Yalnızca Windows. İndirme sürerken iptal yok.

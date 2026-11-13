@@ -4,6 +4,19 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-11-13] [FIX] | İlk Release'ler ve gerçek güncelleme denemesi
+
+v1.1.0 etiketi itildi; Windows CI'da test cp1252 kodlamasıyla kırıldı (Release
+yok) → test düzeltildi, v1.1.1 yayınlandı (etiket taşıma reddedildi, yeni
+PATCH çıkarıldı). CI exe özeti yerelle aynı. 1.1.1 Release'ten indirilip kuruldu,
+v1.1.2 yayınlandı; uygulama içi güncelleme uçtan uca çalıştı (pencere, indirme,
+SHA-256, sessiz kurulum, yeniden açılma). Bulgu: makinedeki eski 1.0.0 yönetici
+kurulumu yüzünden Inno yönetici modunu seçti ve yanlış kurulumu yükseltti →
+güncelleyici `/CURRENTUSER`/`/ALLUSERS` geçiyor, Inno
+`PrivilegesRequiredOverridesAllowed=commandline dialog`. Güncelleme penceresi
+düğmeleri tek satır ortalandı (genişliksiz `Flow` alt alta diziyordu). Detay:
+[[guncelleme-sistemi]], [[surum-yayinlama]].
+
 ## [2026-11-13] [REFACTOR] | Kenar çubuğu: niyete göre gruplar + dosya-önce akışı
 
 Sorun: 4 grup iki eksene dağılmıştı (Belgeler/Tablolar/Görseller = tür,

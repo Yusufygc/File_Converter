@@ -115,8 +115,11 @@ Item {
                 visible: running
             }
 
-            Flow {
-                Layout.alignment: Qt.AlignRight
+            // Tek satır, ortalı. (Genişliği verilmemiş bir Flow her düğmeyi ayrı satıra
+            // kaydırıyordu; aynı anda en çok 3 düğme görünür, 520 px karta sığar.)
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 4
                 spacing: 10
 
                 ModernButton {

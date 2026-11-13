@@ -198,3 +198,20 @@ def test_corrupt_preferences_fall_back_to_defaults(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("FILECONVERT_HOME", str(tmp_path))
     (tmp_path / "updates.json").write_text("{bozuk", encoding="utf-8")
     assert us.load_preferences() == us.UpdatePreferences()
+
+
+
+def test_install_mode_follows_running_installation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    local = tmp_path / "Local"
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    per_user = local / "Programs" / "FileConvert"
+    per_user.mkdir(parents=True)
+    all_users = tmp_path / "Program Files" / "FileConvert"
+    all_users.mkdir(parents=True)
+
+    assert us.install_mode_arguments(per_user) == ["/CURRENTUSER"]
+    assert us.install_mode_arguments(all_users) == ["/ALLUSERS"]
+    assert us.install_mode_arguments(None) == []  # kaynak koddan çalışırken mod zorlanmaz
+
+    args = us.installer_arguments(tmp_path / "FileConvert-Setup-9.9.9.exe", tmp_path, per_user)
+    assert "/CURRENTUSER" in args and args[-1].startswith("/LOG=")

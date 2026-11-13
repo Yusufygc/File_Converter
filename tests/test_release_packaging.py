@@ -136,6 +136,7 @@ def test_inno_script_has_required_settings() -> None:
     assert re.search(r"^AppId=\{\{8E478C22-671A-4D7A-A144-C9271DB89F42\}$", iss, re.MULTILINE)  # 1.0.0 ile aynı, sabit
     for line in (
         "PrivilegesRequired=lowest",
+        "PrivilegesRequiredOverridesAllowed=commandline dialog",  # güncelleme kurulum modunu zorlar
         "CloseApplications=yes",
         "RestartApplications=no",
         "OutputBaseFilename=FileConvert-Setup-{#AppVersion}",
