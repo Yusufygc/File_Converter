@@ -1,0 +1,13 @@
+# Satır sonları her makinede aynı: packaging/launcher.py exe özetine girer (bkz. docs/wiki/paketleme.md)
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.ico binary
+*.exe binary
+*.zip binary
+*.pdf binary
+*.docx binary
+*.pptx binary
+*.xlsx binary

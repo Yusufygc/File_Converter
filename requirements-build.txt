@@ -1,0 +1,3 @@
+-r requirements.txt
+# Sürümü sabit: kararlı exe özeti PyInstaller sürümüne bağlıdır (bkz. docs/wiki/paketleme.md)
+pyinstaller==6.22.3

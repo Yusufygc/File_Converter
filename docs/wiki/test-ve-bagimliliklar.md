@@ -80,12 +80,17 @@ her push'ta otomatik doğrular (bkz. [[mimari]]).
   sabitlenir, `pymupdf_layout` + `tabulate`'i de çeker), `openpyxl`
   (PDF→Excel), `python-docx`, `pytesseract`, `Pillow`, `pywin32`
   (yalnızca `sys_platform == "win32"`).
-- `requirements-dev.txt` — `requirements.txt` + `pytest` + `pyinstaller`
-  (bkz. [[paketleme]]).
+- `requirements-dev.txt` — `requirements.txt` + `pytest`.
+- `requirements-build.txt` — `requirements.txt` + sabit `pyinstaller==6.22.3`
+  (exe özeti PyInstaller sürümüne bağlı, bkz. [[paketleme]]).
+- `requirements-lock.txt` — geçişli dahil tüm sürümler (`pip freeze`, Python 3.10);
+  Release iş akışı `-c requirements-lock.txt` ile kurar ki CI exe'si yerelle aynı olsun.
+  `tests/test_release_packaging.py` doğrudan bağımlılıkların kilitle uyumunu denetler.
 
 ```bash
 pip install -r requirements.txt        # çalıştırmak için
 pip install -r requirements-dev.txt    # geliştirmek/test için
+pip install -r requirements-build.txt  # exe/kurulum derlemek için
 ```
 
 ## Harici Araç Bağımlılıkları (pip ile gelmez)

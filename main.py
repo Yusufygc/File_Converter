@@ -1,7 +1,11 @@
 """
 FileConvert — Giriş Noktası (QML Sürümü)
 ============================================
-PySide6 QML motorunu başlatır, AppBridge köprüsünü QML context'ine bağlar.
+PySide6 QML motorunu başlatır, AppBridge ve UpdateBridge köprülerini QML
+context'ine bağlar.
+
+Paketlenmiş exe bu dosyayı `packaging/launcher.py` üzerinden çağırır; o dosya
+exe özetine girdiği için değişmez, değişen mantık burada durur.
 """
 
 import logging
@@ -9,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -17,6 +22,10 @@ from core.utils.logging_setup import configure_logging, current_log_path
 from core.utils.resource_helper import get_resource_path
 from ui_qml.bridge.app_bridge import AppBridge
 from ui_qml.bridge.app_settings import APP_NAME, ORG_NAME, QmlAppSettings
+from ui_qml.bridge.update_bridge import UpdateBridge
+from version import __version__
+
+STARTUP_UPDATE_CHECK_DELAY_MS = 3000
 
 
 def _handle_exception(exc_type, exc_value, exc_tb):
@@ -50,6 +59,7 @@ def main() -> int:
         # Günlük klasörü oluşturulamazsa (izin/salt okunur profil) uygulama
         # yine de açılmalı; yalnızca dosyaya kayıt olmaz.
         pass
+    logging.getLogger("fileconvert").info("FileConvert %s başlatılıyor", __version__)
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 
     # Windows Görev Çubuğunda Özel İkonu Göstermek için AppUserModelID
@@ -83,11 +93,14 @@ def main() -> int:
     x, y, width, height = settings.load_window_rect()
 
     bridge = AppBridge()
+    update_bridge = UpdateBridge()
+    update_bridge.quitRequested.connect(app.quit)
+    app.aboutToQuit.connect(update_bridge.shutdown)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("bridge", bridge)
+    engine.rootContext().setContextProperty("updateBridge", update_bridge)
 
-    from PySide6.QtCore import QUrl
     qml_file = get_resource_path("ui_qml/qml/Main.qml")
     engine.load(QUrl.fromLocalFile(qml_file))
 
@@ -101,6 +114,9 @@ def main() -> int:
         root_window.setProperty("y", y)
     root_window.setProperty("width", width)
     root_window.setProperty("height", height)
+
+    # Pencere çizildikten sonra tek istekle yeni sürüm denetimi (testlerde değil, yalnızca burada).
+    QTimer.singleShot(STARTUP_UPDATE_CHECK_DELAY_MS, update_bridge.startupCheck)
 
     return app.exec()
 

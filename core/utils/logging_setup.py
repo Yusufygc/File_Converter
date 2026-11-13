@@ -15,17 +15,17 @@ SRP : Yalnızca günlük yapılandırmasından sorumlu.
 from __future__ import annotations
 
 import logging
-import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
+
+from core.utils.app_paths import user_data_dir
 
 _configured_path: Optional[Path] = None
 
 
 def log_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / ".cache")
-    return Path(base) / "FileConvert" / "logs"
+    return user_data_dir() / "logs"
 
 
 def configure_logging(directory: Optional[Path] = None) -> Path:

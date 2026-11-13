@@ -4,6 +4,29 @@ En yeni girişler en üstte. Format: `[YYYY-AA-GG] [İŞLEM_TİPİ] | Açıklama
 İşlem tipleri: `INGEST` (yeni özellik/kaynak), `REFACTOR` (mimari
 değişiklik), `FIX` (hata düzeltme), `DOCS` (dokümantasyon).
 
+## [2026-11-13] [İNGEST] | Prod hazırlığı: kararlı exe, sürüm sistemi, uygulama içi güncelleme
+
+Kaynak: `D002-HazirPromptlar/Prod hazırlığı/` (exe-dagitim-rehberi, surum-yayinlama,
+guncelleme-sistemi); referans dosyalar P001'den tek tek uyarlandı. Eklendi: `version.py`
+(tek kaynak, 1.1.0 — kullanıcı kararı), `packaging/` (sabit `launcher.py`, sabit
+`launcher_version_info.txt`, `launcher.sha256`, `FileConvert.iss`), `build_exe.py`,
+`build_installer.py`, `build_verify.py`, `tools/release.py`, `.github/workflows/release.yml`,
+`requirements-build.txt`, `requirements-lock.txt`, `.gitattributes`, `core/update_service.py`,
+`ui_qml/bridge/update_bridge.py`, `UpdateModal.qml`, Ayarlar'da "Güncellemeler" kartı,
+`core/utils/app_paths.py` (`FILECONVERT_HOME` yalıtımı; testler ve deneme kayıt
+defterine dokunmuyor). Kaldırıldı: `fileconvert.spec`, `version_info.txt`, `installer/`.
+Inno: `PrivilegesRequired=lowest` (1.0.0 admin'di), aynı AppId; eski HKLM kurulumu
+kaldırmayı teklif ediyor; Tesseract görevi tek UAC ile (kullanıcı kararı), sessiz
+güncellemede atlanıyor. Ölçüm: 3 derlemede exe özeti aynı (`559c5fe5…`), exe ve
+kurulum denemesi bu makinede başarılı, kurulum 94 MB. Bulgu: ilk derlemede deneme
+kapısı yanlış "başarılı" verdi (uygulama hata penceresiyle açık kalmıştı;
+`pymupdf4llm` düzen modeli veri dosyaları pakette yoktu) → model pakettan çıkarıldı,
+PDF→Markdown klasik moda zorlandı (424 → 370 MB), `launch_check` artık günlükte
+ölümcül hata arıyor. Doğrulanmayan: CI özeti = yerel özet, SAC'lı başka makine,
+gerçek Release ile uçtan uca güncelleme, UAC'lı Tesseract ve 1.0.0 kaldırma
+akışları. Testler: 210 → 250. Detay: [[paketleme]], [[surum-yayinlama]],
+[[guncelleme-sistemi]].
+
 ## [2026-11-13] [REFACTOR] | Hata mekanizması: UI'dan teknik terimler kaldırıldı
 
 Kullanıcı: "UI'da backend'e ait terimler olmasın, exception mekanizmasını

@@ -8,6 +8,7 @@ bağlantı sağlar.
 
 from __future__ import annotations
 
+import logging
 import platform
 import subprocess
 from pathlib import Path
@@ -41,6 +42,8 @@ from ui_qml.bridge.app_settings import QmlAppSettings
 from ui_qml.bridge.conversion_worker import QmlConversionWorker, QmlMergeWorker
 from ui_qml.bridge.file_discovery import collect_files
 from ui_qml.bridge.file_list_model import FileListModel
+
+_log = logging.getLogger(__name__)
 
 
 _PREFERRED_ORDER: List[Union[Tuple[str, str], Tuple[str, str, str]]] = [
@@ -224,6 +227,13 @@ class AppBridge(QObject):
         register_all(self._registry)
         self._converters: List[IConverter] = sorted(
             self._registry.all_converters(), key=_sort_key
+        )
+        # Paketlenmiş exe'de eksik modül/veri dosyası sessizce converter kaybettirir
+        # (bkz. docs/wiki/paketleme.md); günlükteki bu satır tanının ilk adımıdır.
+        unavailable = [c.__class__.__name__ for c in self._converters if not c.is_available]
+        _log.info(
+            "%d dönüştürücü yüklendi; kullanılamayan: %s",
+            len(self._converters), ", ".join(unavailable) or "yok",
         )
 
         self._active_index: int = 0

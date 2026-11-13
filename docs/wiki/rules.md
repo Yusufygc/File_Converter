@@ -74,6 +74,13 @@ projede gözlemlenen tercihlerden türetilmiştir — icat değildir.
   içeriği kontrol edilir.
 - Yeni bir commit tercih edilir; `git commit --amend` yalnızca kullanıcı
   açıkça isterse kullanılır.
+- **Sürüm etiketi oluşturma ve etiket push'u yalnızca kullanıcının açık
+  isteğiyle** yapılır: `v*` etiketi itmek Release iş akışını başlatır ve tüm
+  kurulu kullanıcılara güncelleme penceresi çıkarır (bkz. [[surum-yayinlama]]).
+  Yayınlanmış etiket taşınmaz; yeni PATCH çıkarılır.
+- `packaging/launcher.py` ve `packaging/launcher_version_info.txt` değiştirilmez;
+  `build_exe.py` bağımsız değişkenleri bilerek değiştirilmedikçe değiştirilmez
+  (exe özeti değişir, onay kapısı yayını durdurur — bkz. [[paketleme]]).
 
 ## Bilinçli Kapsam-Dışı Kararlar
 

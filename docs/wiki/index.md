@@ -23,7 +23,9 @@ bkz. proje kökündeki `CLAUDE.md`.
 ## Test & Bağımlılıklar
 
 - [[test-ve-bagimliliklar]] — `tests/` yapısı, `requirements*.txt`, harici araçlar, CI
-- [[paketleme]] — PyInstaller ile dağıtılabilir exe üretme
+- [[paketleme]] — kararlı exe (her sürümde aynı özet), onay kapısı, Inno kurulum, derleme sonrası deneme
+- [[surum-yayinlama]] — `version.py`, `tools/release.py`, etiketle GitHub Release iş akışı
+- [[guncelleme-sistemi]] — uygulama içi güncelleme (GitHub Releases, SHA-256 doğrulama)
 
 ## Kurallar
 

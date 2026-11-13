@@ -134,4 +134,9 @@ ApplicationWindow {
     SummaryModal {
         z: 99
     }
+
+    // ── Uygulama İçi Güncelleme Modalı ───────────────────────────────
+    UpdateModal {
+        z: 100
+    }
 }

@@ -44,7 +44,13 @@ python main.py                    # uygulamayı çalıştır
 python -m pytest tests/ -v        # testleri çalıştır (Qt gerektirmez, ~0.5s)
 pip install -r requirements.txt        # çalışma zamanı bağımlılıkları
 pip install -r requirements-dev.txt    # + pytest
+pip install -r requirements-build.txt  # + pyinstaller (exe derlemek için)
+python build_installer.py              # kararlı exe + kurulum dosyası (bkz. docs/wiki/paketleme.md)
+python tools/release.py X.Y.Z          # sürüm commit'i + etiket, İTMEZ (bkz. docs/wiki/surum-yayinlama.md)
 ```
+
+Etiket oluşturma/push'u yalnızca kullanıcının açık isteğiyle yapılır (tüm
+kullanıcılara güncelleme çıkarır); `packaging/launcher.py` değiştirilmez.
 
 ## Kurallar
 

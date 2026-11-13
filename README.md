@@ -1,6 +1,22 @@
 # FileConvert
 
+![Sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.1.0-38BDF8)
+
 PySide6 ile yazılmış profesyonel dosya dönüştürücü uygulaması.
+
+## İndirme ve Kurulum (Windows)
+
+[Releases](https://github.com/Yusufygc/File_Converter/releases/latest) sayfasından
+`FileConvert-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Kurulum yönetici
+hakkı istemez (kullanıcı hesabına kurar); uygulama yeni sürümleri kendisi
+bulur ve tek tıkla güncellenir (Ayarlar → Güncellemeler).
+
+Kurulum dosyası imzasızdır:
+- **SmartScreen** "Windows bilgisayarınızı korudu" derse: **Ek bilgi → Yine de çalıştır**.
+- **Akıllı Uygulama Denetimi** engellerse bu seçenek çıkmaz: birkaç dakika
+  sonra aynı dosyayı yeniden çalıştırın ya da yeni sürümü indirin.
+
+Sürüm yayınlama süreci: `docs/wiki/surum-yayinlama.md`.
 
 ---
 

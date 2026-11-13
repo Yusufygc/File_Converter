@@ -1,5 +1,6 @@
-# PyInstaller Windows sürüm bilgisi kaynağı (fileconvert.spec -> EXE(version=...)).
-# Sürüm yükseltirken filevers/prodvers ve StringStruct değerlerini birlikte güncelle.
+# UTF-8
+# SABIT surum kaynagi (1.0.0.0): urun surumu degisse de exe'nin ozeti degismesin diye bilerek yukseltilmez.
+# Gercek surum kurulum dosyasinda, "Uygulamalar ve ozellikler" kaydinda ve uygulamanin Ayarlar sayfasinda gorunur.
 VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=(1, 0, 0, 0),
@@ -16,10 +17,9 @@ VSVersionInfo(
       StringTable(
         '041F04B0',
         [StringStruct('CompanyName', 'Yusuf YGC'),
-         StringStruct('FileDescription', 'FileConvert - Dosya Dönüştürücü'),
+         StringStruct('FileDescription', 'FileConvert - Dosya Donusturucu'),
          StringStruct('FileVersion', '1.0.0.0'),
          StringStruct('InternalName', 'FileConvert'),
-         StringStruct('LegalCopyright', '© 2026 Yusuf YGC'),
          StringStruct('OriginalFilename', 'FileConvert.exe'),
          StringStruct('ProductName', 'FileConvert'),
          StringStruct('ProductVersion', '1.0.0.0')])

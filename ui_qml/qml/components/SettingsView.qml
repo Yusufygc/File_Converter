@@ -289,6 +289,43 @@ ScrollView {
                 }
             }
 
+            // ── KART 4: Güncellemeler ─────────────────────────────────
+            ModernCard {
+                Layout.fillWidth: true
+                title: "Güncellemeler"
+                visible: typeof updateBridge !== "undefined" && updateBridge !== null
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: (typeof updateBridge !== "undefined" && updateBridge) ? updateBridge.statusLine : ""
+                        font.family: theme.fontFamily
+                        font.pointSize: 10
+                        color: (typeof updateBridge !== "undefined" && updateBridge && updateBridge.state === "error") ?
+                               theme.warning : theme.textPrimary
+                        wrapMode: Text.WordWrap
+                    }
+
+                    ModernButton {
+                        text: "Şimdi Denetle"
+                        pointSize: 10
+                        implicitHeight: 34
+                        enabled: typeof updateBridge !== "undefined" && updateBridge && !updateBridge.busy
+                        onClicked: updateBridge.checkNow()
+                    }
+                }
+
+                ModernCheckBox {
+                    Layout.fillWidth: true
+                    text: "Açılışta yeni sürümü denetle"
+                    checked: typeof updateBridge !== "undefined" && updateBridge && updateBridge.checkOnStartup
+                    onToggled: updateBridge.setCheckOnStartup(checked)
+                }
+            }
+
             Item { Layout.preferredHeight: 12 }
         }
     }

@@ -12,6 +12,8 @@ from typing import Optional, Tuple
 
 from PySide6.QtCore import QSettings
 
+from core.utils.app_paths import home_override
+
 ORG_NAME = "YusufDev"
 APP_NAME = "FileConvert"
 
@@ -22,7 +24,14 @@ class QmlAppSettings:
     """Kullanıcı tercihlerini saklayan QSettings katmanı."""
 
     def __init__(self):
-        self._qs = QSettings(ORG_NAME, APP_NAME)
+        override = home_override()
+        if override is not None:
+            # Test ve derleme sonrası exe denemesi kayıt defterindeki gerçek
+            # kullanıcı ayarlarına dokunmasın: ayarlar geçici INI dosyasına gider.
+            override.mkdir(parents=True, exist_ok=True)
+            self._qs = QSettings(str(override / "settings.ini"), QSettings.Format.IniFormat)
+        else:
+            self._qs = QSettings(ORG_NAME, APP_NAME)
 
     # ── Tema ──────────────────────────────────────────────────────────
     def save_theme_mode(self, mode: str) -> None:

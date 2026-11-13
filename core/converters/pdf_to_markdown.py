@@ -7,12 +7,23 @@ Markdown'a çevirir (not alma, dokümantasyon, LLM girdisi için).
 `pymupdf4llm` PyMuPDF ekibinin paketidir; sürümü `PyMuPDF` ile birebir
 eşleşecek şekilde sabitlenir (bkz. requirements.txt).
 
+Düzen modeli (`pymupdf.layout`, ONNX) bilinçli olarak KULLANILMAZ:
+`pymupdf4llm` import edilirken onu kendiliğinden etkinleştiriyor; model
+onnxruntime + sympy + networkx ile pakete ~60 MB ekliyor, ilk dönüşümü
+saniyelerce yavaşlatıyor ve PyInstaller'ın toplamadığı veri dosyaları
+yüzünden paketlenmiş uygulamada açılışta çöküyordu (2026-11-13, ilk exe
+denemesi). Klasik (kural tabanlı) mod hem geliştirme ortamında hem exe'de
+aynı çıktıyı verir. Bkz. docs/wiki/paketleme.md.
+
 SRP : Yalnızca PDF→Markdown dönüşümünden sorumlu.
 """
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
+import sys
+from types import ModuleType
 from typing import List, Optional
 
 from core.converters.base import BaseConverter, ConvertOutcome
@@ -21,6 +32,18 @@ from core.errors import NothingToConvertError, PasswordProtectedError
 from core.interfaces.converter_interface import ConversionOptions
 from core.interfaces.page_range_interface import IPageRangeSelectable
 from core.user_texts import ENGINE_BUILTIN, ENGINE_UNAVAILABLE, HINT_BUILTIN_MISSING
+
+
+def _import_pymupdf4llm() -> ModuleType:
+    """
+    `pymupdf4llm`'i düzen modeli olmadan yükler. `sys.modules[...] = None`
+    Python'un belgelenmiş "bu modül yok" işaretidir: paketin kendi
+    `import pymupdf.layout` denemesi ImportError alır ve klasik moda düşer.
+    """
+    sys.modules.setdefault("pymupdf.layout", None)  # type: ignore[arg-type]
+    import pymupdf4llm
+
+    return pymupdf4llm
 
 
 class PdfToMarkdownConverter(BaseConverter, IPageRangeSelectable):
@@ -47,7 +70,8 @@ class PdfToMarkdownConverter(BaseConverter, IPageRangeSelectable):
         options: ConversionOptions,
     ) -> Optional[ConvertOutcome]:
         import fitz
-        import pymupdf4llm
+
+        pymupdf4llm = _import_pymupdf4llm()
 
         doc = fitz.open(str(source_path))
         try:
@@ -74,12 +98,9 @@ class PdfToMarkdownConverter(BaseConverter, IPageRangeSelectable):
 
     @property
     def is_available(self) -> bool:
-        try:
-            import fitz  # noqa: F401
-            import pymupdf4llm  # noqa: F401
-            return True
-        except ImportError:
-            return False
+        # Import etmeden bakılır: arayüz her converter listelemesinde bunu sorar,
+        # paketi yüklemek açılışı yavaşlatırdı.
+        return all(importlib.util.find_spec(name) is not None for name in ("fitz", "pymupdf4llm"))
 
     @property
     def active_engine_name(self) -> str:

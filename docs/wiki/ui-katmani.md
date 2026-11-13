@@ -36,7 +36,17 @@ Composition root / controller; `QObject` türevi, `Property`/`Signal`/
   `_PDF_TOOL_META` sözlüğünden (sınıf adı → (kısa ad, ikon)) gelir;
   `PdfExtractImagesConverter` `images` kategorisine düşer.
 - **Ayarlar**: `QmlAppSettings` üzerinden tema/çıktı klasörü/kalite
-  ayarlarını kalıcı saklar.
+  ayarlarını kalıcı saklar. `FILECONVERT_HOME` ayarlıysa (testler,
+  derleme sonrası exe denemesi) kayıt defteri yerine o klasördeki
+  `settings.ini`'ye yazar — gerçek kullanıcı ayarlarına dokunulmaz.
+- Açılışta yüklenen converter sayısını ve kullanılamayanları günlüğe yazar
+  (paketlenmiş exe'de eksik modül tanısı, bkz. [[paketleme]]).
+
+## `ui_qml/bridge/update_bridge.py` — `UpdateBridge`
+
+QML'e `updateBridge` adıyla bağlanır; `UpdateModal.qml` ve Ayarlar'daki
+"Güncellemeler" kartını `core/update_service.py`'ye bağlar. Ayrıntı:
+[[guncelleme-sistemi]].
 
 ## `ui_qml/bridge/file_discovery.py`
 
