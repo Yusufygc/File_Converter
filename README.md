@@ -1,6 +1,6 @@
 # FileConvert
 
-![Sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.1.3-38BDF8)
+![Sürüm](https://img.shields.io/badge/s%C3%BCr%C3%BCm-1.1.4-38BDF8)
 
 PySide6 ile yazılmış profesyonel dosya dönüştürücü uygulaması.
 
